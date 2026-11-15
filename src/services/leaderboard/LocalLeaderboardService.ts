@@ -47,9 +47,18 @@ export class LocalLeaderboardService implements LeaderboardService {
     return sortEntries(this.read().filter((e) => e.difficulty === difficulty)).slice(0, limit);
   }
 
+  /** Keeps each player's best score per planet and difficulty. */
   async submit(entry: NewLeaderboardEntry): Promise<LeaderboardEntry> {
     const full: LeaderboardEntry = { ...entry, id: uid() };
-    const all = this.read();
+    const same = (e: LeaderboardEntry) =>
+      e.name.toLowerCase() === entry.name.toLowerCase() &&
+      e.difficulty === entry.difficulty &&
+      !!entry.planet &&
+      e.planet === entry.planet;
+    let all = this.read();
+    const prev = all.find(same);
+    if (prev && prev.average > entry.average) return prev;
+    all = all.filter((e) => !same(e));
     all.push(full);
     const kept = (['easy', 'medium', 'hard'] as Difficulty[]).flatMap((d) =>
       sortEntries(all.filter((e) => e.difficulty === d)).slice(0, MAX_STORED_PER_DIFFICULTY),

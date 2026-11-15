@@ -16,7 +16,8 @@ something simpler and more game-like, so the game was rebuilt around this flow:
 - Budget per difficulty, scored on its own (150 points).
 - Astronaut multiplier: success × (1 + 0.1 per astronaut), failure −60 per astronaut.
 - Launch sequence, take-off UI, pressure meter, shared pre-animated space journey.
-- Ten launches per campaign; the average goes to that difficulty's leaderboard.
+- Ten launches per campaign. Every single mission is posted to the leaderboard (labelled with planet
+  and difficulty); one mission is enough to appear.
 
 ### Look and feel
 

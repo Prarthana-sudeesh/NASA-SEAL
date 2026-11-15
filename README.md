@@ -5,8 +5,8 @@
 An educational browser game. You play a newly appointed rocket scientist designing crewed rockets that
 fly to **real exoplanets and back**: Earth → planet → Earth. You choose a destination, study its real
 data, build a rocket by drag and drop within a budget, and launch it. Afterwards an engineering debrief
-explains which of your design decisions made the mission succeed or fail. Ten missions make a campaign,
-and your average goes on a leaderboard for that difficulty.
+explains which of your design decisions made the mission succeed or fail. Every mission goes on the
+leaderboard, labelled with its planet and difficulty, and ten missions make a campaign.
 
 The game covers five themes:
 
@@ -70,7 +70,9 @@ bundled in `src/data/planets.json`.
    gauge, crew indicator and mission tracker. If something is wrong, the rocket fails at that stage.
 6. **Mission report**: score breakdown (mission, budget, each dial, part choice, astronauts) and a
    debrief explaining exactly why the mission succeeded or failed.
-7. **Ten missions per campaign**: your average goes on that difficulty's leaderboard.
+7. **Leaderboard**: every mission is posted straight away, labelled with its planet, difficulty and
+   whether it made the round trip. The board keeps your best score for each planet and difficulty
+   (best per difficulty on the shared online board). Ten missions make a campaign with its own summary.
 
 ### Extra fun
 

@@ -1,66 +1,20 @@
 import { motion } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
-import { announce } from '../../components/LiveRegion.tsx';
+import { useEffect } from 'react';
 import { getPlanet } from '../../data/planets.ts';
-import { getLeaderboardService } from '../../services/leaderboard/index.ts';
 import { useGame } from '../../store/gameStore.ts';
-import { useSettings } from '../../store/settingsStore.ts';
-import { ATTEMPTS_PER_RUN, DIFFICULTIES } from '../config.ts';
+import { DIFFICULTIES } from '../config.ts';
 import { BigButton, TopMenu } from '../ui/Hud.tsx';
 import { sfx } from '../sound.ts';
 import { Astronaut, Scientist, SpeechBubble } from '../ui/Pixel.tsx';
 import { CommandCenter, Stage, WallScreen } from '../ui/Scenery.tsx';
 import { avg } from './Mission.tsx';
 
-type Status = 'idle' | 'saving' | 'saved' | 'error';
-
 export function Summary() {
-  const { run, player, markSubmitted, newCampaign, go } = useGame();
-  const addMyEntry = useSettings((s) => s.addMyEntry);
-  const [status, setStatus] = useState<Status>(run?.submittedEntryId ? 'saved' : 'idle');
-  const started = useRef(false);
+  const { run, player, newCampaign, go } = useGame();
   useEffect(() => sfx('fanfare'), []);
-  const [error, setError] = useState('');
   const attempts = run?.attempts ?? [];
   const totals = attempts.map((a) => a.result.total);
   const average = avg(totals);
-  const complete = attempts.length >= ATTEMPTS_PER_RUN;
-  const planets = [...new Set(attempts.map((a) => getPlanet(a.planetId)?.name ?? a.planetId))];
-
-  const submit = async () => {
-    if (!run || !player) return;
-    setStatus('saving');
-    try {
-      const e = await (
-        await getLeaderboardService()
-      ).submit({
-        name: player.username,
-        difficulty: run.difficulty,
-        average,
-        best: Math.max(...totals),
-        planetsVisited: planets,
-        date: new Date().toISOString(),
-      });
-      markSubmitted(e.id);
-      addMyEntry(e.id);
-      setStatus('saved');
-      announce(
-        `Average ${average} posted to the ${DIFFICULTIES[run.difficulty].label} leaderboard.`,
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Couldn’t save the score.');
-      setStatus('error');
-    }
-  };
-
-  useEffect(() => {
-    if (complete && run && !run.submittedEntryId && !started.current) {
-      started.current = true;
-      void submit();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [complete]);
-
   if (!run || attempts.length === 0) {
     return (
       <div className="p-6 text-center">
@@ -113,18 +67,7 @@ export function Summary() {
                   </div>
                 </div>
               </div>
-              <p aria-live="polite" className={status === 'error' ? 'text-bad' : 'text-ok'}>
-                {status === 'saving' && 'Posting to the leaderboard…'}
-                {status === 'saved' && `✓ Posted to the leaderboard as ${player?.username}`}
-                {status === 'error' && (
-                  <>
-                    ✕ {error}{' '}
-                    <button type="button" className="underline" onClick={() => void submit()}>
-                      Retry
-                    </button>
-                  </>
-                )}
-              </p>
+              <p className="text-ok">✓ Every mission was posted to the leaderboard.</p>
             </div>
             <ol className="flex min-h-0 flex-col gap-[2%] overflow-y-auto pr-1">
               {attempts.map((a, i) => (
@@ -163,7 +106,7 @@ export function Summary() {
         <div className="absolute bottom-[30%] left-[6%] z-10 max-w-[30%]">
           <SpeechBubble
             speaker="Dr. Hart"
-            text={`Ten missions done! Your average of ${average} is what counts on the leaderboard. Consistency beats one lucky launch.`}
+            text={`Ten missions done! Your campaign average is ${average}. Each mission is already on the leaderboard with its planet and difficulty.`}
           />
         </div>
         <div className="absolute bottom-[5%] right-[3%] flex gap-[1vw]">

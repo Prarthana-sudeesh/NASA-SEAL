@@ -1,5 +1,7 @@
 import { animate, motion, useMotionValue, useTransform } from 'framer-motion';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { getLeaderboardService } from '../../services/leaderboard/index.ts';
+import { useSettings } from '../../store/settingsStore.ts';
 import { getPlanet } from '../../data/planets.ts';
 import { useReducedMotion } from '../../hooks/useReducedMotion.ts';
 import { currentAttempt, useGame } from '../../store/gameStore.ts';
@@ -38,7 +40,11 @@ function CountUp({ to }: { to: number }) {
 }
 
 export function Result() {
-  const { run, player, next, go } = useGame();
+  const { run, player, next, go, markPosted } = useGame();
+  const addMyEntry = useSettings((s) => s.addMyEntry);
+  const [post, setPost] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [postError, setPostError] = useState('');
+  const posting = useRef<string | null>(null);
   const attempt = currentAttempt(run);
   const success = attempt?.result.success;
   useEffect(() => {
@@ -70,6 +76,37 @@ export function Result() {
       teamSize: attempt.team?.length ?? 1,
     });
   }, [key, run, attempt, planet, addFlight, player]);
+
+  // Every mission goes on the leaderboard, labelled with its planet and difficulty.
+  const postScore = useCallback(async () => {
+    if (!run || !attempt || !planet || !player) return;
+    setPost('saving');
+    try {
+      const svc = await getLeaderboardService();
+      const e = await svc.submit({
+        name: player.username,
+        difficulty: run.difficulty,
+        average: attempt.result.total,
+        best: attempt.result.total,
+        planetsVisited: [planet.name],
+        planet: planet.name,
+        success: attempt.result.success,
+        date: new Date().toISOString(),
+      });
+      markPosted(attempt.n, e.id);
+      addMyEntry(e.id);
+      setPost('saved');
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : 'Couldn’t post the score.');
+      setPost('error');
+    }
+  }, [run, attempt, planet, player, markPosted, addMyEntry]);
+  useEffect(() => {
+    if (!key || !attempt || posting.current === key) return;
+    posting.current = key;
+    if (attempt.postedEntryId) setPost('saved');
+    else void postScore();
+  }, [key, attempt, postScore]);
   if (!run || !attempt || !planet) {
     return (
       <div className="p-6 text-center">
@@ -136,6 +173,26 @@ export function Result() {
         <div className="absolute left-1/2 top-[19%] z-10 flex w-[34%] -translate-x-1/2 flex-col items-center gap-1">
           <p className="outlined text-center text-[clamp(9px,1vw,14px)] italic">
             {reaction.probe ? '🤖' : '👩‍🚀'} {reaction.speaker}: “{reaction.text}”
+          </p>
+          <p
+            aria-live="polite"
+            className={`outlined text-center text-[clamp(9px,1vw,13px)] font-bold ${post === 'error' ? 'text-[#ff8a8a]' : 'text-[#ffe24a]'}`}
+          >
+            {post === 'saving' && 'Posting to the leaderboard…'}
+            {post === 'saved' && (
+              <button type="button" className="underline" onClick={() => go('leaderboard')}>
+                🏆 Posted to the leaderboard: {r.total} on {planet.name} (
+                {DIFFICULTIES[run.difficulty].label})
+              </button>
+            )}
+            {post === 'error' && (
+              <>
+                ✕ {postError}{' '}
+                <button type="button" className="underline" onClick={() => void postScore()}>
+                  Retry
+                </button>
+              </>
+            )}
           </p>
           {chips.map((c, i) => (
             <motion.button

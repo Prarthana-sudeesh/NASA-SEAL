@@ -47,6 +47,8 @@ export interface Attempt {
   event?: { id: HazardId; choice: number | null; resolved: boolean };
   /** Team members who flew this mission (team mode only). */
   team?: string[];
+  /** Leaderboard entry this mission was posted as. */
+  postedEntryId?: string;
   at: string;
 }
 
@@ -98,6 +100,8 @@ export interface GameState {
   next: () => void;
   newCampaign: () => void;
   markSubmitted: (id: string) => void;
+  /** Remember that mission `n` of the current campaign was posted to the leaderboard. */
+  markPosted: (n: number, id: string) => void;
   /** Answer hazard number `index` on the current flight (choice null = ran out of time). */
   resolveEvent: (index: number, choice: number | null) => void;
   /** Start team mode with these player names (first = signed-in player), or null for solo. */
@@ -219,6 +223,19 @@ export const useGame = create<GameState>()(
       newCampaign: () =>
         set((s) => ({ run: newRun(s.difficulty), screen: 'mission', step: 'parts' })),
       markSubmitted: (id) => set((s) => (s.run ? { run: { ...s.run, submittedEntryId: id } } : {})),
+      markPosted: (n, id) =>
+        set((s) =>
+          s.run
+            ? {
+                run: {
+                  ...s.run,
+                  attempts: s.run.attempts.map((a) =>
+                    a.n === n ? { ...a, postedEntryId: id } : a,
+                  ),
+                },
+              }
+            : {},
+        ),
       resolveEvent: (index, choice) => {
         const run = get().run;
         const a = run?.attempts.at(-1);

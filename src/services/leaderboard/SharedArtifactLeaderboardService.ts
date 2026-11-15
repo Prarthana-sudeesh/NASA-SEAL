@@ -32,6 +32,8 @@ interface StoredRun {
   best: number;
   planetsVisited: string[];
   date: string;
+  planet?: string;
+  success?: boolean;
 }
 
 const COLLECTION = 'scores';
@@ -48,6 +50,8 @@ function parseRun(v: unknown): StoredRun | null {
       ? r.planetsVisited.filter((x): x is string => typeof x === 'string').slice(0, 20)
       : [],
     date: typeof r.date === 'string' ? r.date : new Date(0).toISOString(),
+    ...(typeof r.planet === 'string' ? { planet: r.planet.slice(0, 40) } : {}),
+    ...(typeof r.success === 'boolean' ? { success: r.success } : {}),
   };
 }
 
@@ -75,7 +79,7 @@ export class SharedArtifactLeaderboardService implements LeaderboardService {
     return sortEntries(rows).slice(0, limit);
   }
 
-  /** Keeps each player's best average per difficulty. */
+  /** Keeps each player's best score per difficulty. */
   async submit(entry: NewLeaderboardEntry): Promise<LeaderboardEntry> {
     const viewer = await this.user.id();
     if (!viewer) throw new Error('Sign in to claude.ai to post to the shared leaderboard.');
@@ -93,6 +97,8 @@ export class SharedArtifactLeaderboardService implements LeaderboardService {
         best: entry.best,
         planetsVisited: entry.planetsVisited,
         date: entry.date,
+        ...(entry.planet ? { planet: entry.planet } : {}),
+        ...(entry.success !== undefined ? { success: entry.success } : {}),
       };
     }
     try {

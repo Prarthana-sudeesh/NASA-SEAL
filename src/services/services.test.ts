@@ -37,6 +37,29 @@ describe('LocalLeaderboardService', () => {
     expect((await svc.list('hard')).map((e) => e.name)).toEqual(['Hardy']);
   });
 
+  it('keeps one best score per player, planet and difficulty, with labels', async () => {
+    const svc = new LocalLeaderboardService('test-lb3');
+    const mission = (name: string, score: number, planet: string, success = true) => ({
+      name,
+      average: score,
+      best: score,
+      difficulty: 'easy' as const,
+      planetsVisited: [planet],
+      planet,
+      success,
+      date: '2026-11-15T00:00:00Z',
+    });
+    await svc.submit(mission('Ace', 600, 'Proxima Cen b'));
+    await svc.submit(mission('ace', 900, 'Proxima Cen b')); // better: replaces
+    await svc.submit(mission('Ace', 300, 'Proxima Cen b', false)); // worse: ignored
+    await svc.submit(mission('Ace', 500, 'Ross 128 b')); // other planet: kept
+    const rows = await svc.list('easy');
+    expect(rows.map((e) => [e.average, e.planet, e.success])).toEqual([
+      [900, 'Proxima Cen b', true],
+      [500, 'Ross 128 b', true],
+    ]);
+  });
+
   it('caps at the top N and survives corrupt storage', async () => {
     const svc = new LocalLeaderboardService('test-lb2');
     for (let i = 0; i < 25; i++) await svc.submit(entry(`P${i}`, i));
@@ -85,6 +108,13 @@ describe('SharedArtifactLeaderboardService', () => {
       ['Ace', 700],
     ]);
     expect((await me.list('hard'))[0]).toMatchObject({ id: 'u1:hard', average: 900 });
+    await me.submit({ ...run(950), planet: 'Ross 128 b', success: true });
+    expect((await friend.list('easy'))[0]).toMatchObject({
+      name: 'Ace',
+      average: 950,
+      planet: 'Ross 128 b',
+      success: true,
+    });
   });
 
   it('explains when posting is not allowed', async () => {

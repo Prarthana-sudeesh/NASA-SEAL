@@ -50,4 +50,8 @@ export interface LeaderboardEntry {
   best: number;
   planetsVisited: string[];
   date: string;
+  /** Planet of this mission (single-mission entries). */
+  planet?: string;
+  /** Whether the mission made the round trip. */
+  success?: boolean;
 }
