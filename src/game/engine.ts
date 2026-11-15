@@ -334,6 +334,8 @@ export function simulate(
   planet: Planet,
   difficulty: Difficulty,
   quizCorrect: boolean | null = null,
+  /** null = no emergency on this flight; otherwise whether the team made the right call. */
+  emergencyHandled: boolean | null = null,
 ): Result {
   const cs = checks(build, dials, planet);
   const failed = cs.find((c) => !c.ok);
@@ -402,6 +404,15 @@ export function simulate(
       max: SCORING.parts,
     },
     { label: 'Science quiz', points: quizCorrect ? SCORING.quiz : 0, max: SCORING.quiz },
+    ...(emergencyHandled === null
+      ? []
+      : [
+          {
+            label: 'Emergency call',
+            points: emergencyHandled ? SCORING.emergency : 0,
+            max: SCORING.emergency,
+          },
+        ]),
   ];
   const base = breakdown.reduce((s, b) => s + b.points, 0);
   const crew = crewAdjust(base, build.crew, success);

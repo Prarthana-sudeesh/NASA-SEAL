@@ -10,6 +10,10 @@ import { Astronaut, Scientist, SpeechBubble } from '../ui/Pixel.tsx';
 import { CommandCenter, Hologram, Stage, WallScreen } from '../ui/Scenery.tsx';
 import { avg } from './Mission.tsx';
 import { sfx } from '../sound.ts';
+import { useCollections } from '../../store/collectionStore.ts';
+import { BADGES } from '../collection.ts';
+import { crewLine } from '../crew.ts';
+import { EVENTS } from '../events.ts';
 
 function CountUp({ to }: { to: number }) {
   const reduced = useReducedMotion();
@@ -50,6 +54,23 @@ export function Result() {
     return () => pops.forEach((t) => window.clearTimeout(t));
   }, [success, attempt?.n]);
   const planet = getPlanet(attempt?.planetId);
+  const addFlight = useCollections((s) => s.addFlight);
+  const unlocks = useCollections((s) => s.lastUnlocks);
+  const key = run && attempt ? `${run.id}:${attempt.n}` : null;
+  useEffect(() => {
+    if (!run || !attempt || !planet || !key) return;
+    const ev = attempt.event;
+    addFlight(player?.username ?? '', {
+      key,
+      planet,
+      difficulty: run.difficulty,
+      crew: attempt.build.crew,
+      result: attempt.result,
+      quizCorrect: !!attempt.quiz?.correct,
+      emergencyHandled: !!ev?.resolved && ev.choice === EVENTS[ev.id].answer,
+      teamSize: attempt.team?.length ?? 1,
+    });
+  }, [key, run, attempt, planet, addFlight, player]);
   if (!run || !attempt || !planet) {
     return (
       <div className="p-6 text-center">
@@ -62,6 +83,21 @@ export function Result() {
   const r = attempt.result;
   const average = avg(run.attempts.map((a) => a.result.total));
   const last = run.attempts.length >= ATTEMPTS_PER_RUN;
+  const mine = unlocks && unlocks.key === key ? unlocks : null;
+  const failId = r.checks.find((c) => !c.ok)?.id ?? null;
+  const reaction = crewLine(
+    attempt.build.crew,
+    r.success ? 'home' : 'return',
+    r.success ? null : failId,
+  );
+  const chips = [
+    ...(mine?.postcard ? [`💌 New postcard from ${planet.name}!`] : []),
+    ...(mine?.photo ? ['📸 Crew photo added to your album'] : []),
+    ...(mine?.badges ?? []).map((b) => {
+      const info = BADGES.find((x) => x.id === b);
+      return `${info?.icon} Badge: ${info?.name}`;
+    }),
+  ];
   return (
     <Stage>
       <CommandCenter>
@@ -97,6 +133,26 @@ export function Result() {
           {DIFFICULTIES[run.difficulty].label}
           {!r.success && ` · Failed at: ${STAGE_LABELS[r.failedAt!]}`}
         </p>
+
+        <div className="absolute left-1/2 top-[19%] z-10 flex w-[34%] -translate-x-1/2 flex-col items-center gap-1">
+          <p className="outlined text-center text-[clamp(9px,1vw,14px)] italic">
+            {reaction.probe ? '🤖' : '👩‍🚀'} {reaction.speaker}: “{reaction.text}”
+          </p>
+          {chips.map((c, i) => (
+            <motion.button
+              key={c}
+              type="button"
+              onClick={() => go('collection')}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.8 + i * 0.25, type: 'spring', stiffness: 260, damping: 14 }}
+              onAnimationStart={() => sfx('pop', 0)}
+              className="rounded-full border-2 border-[#0b0f1e] bg-[#ffe24a] px-3 py-0.5 text-[clamp(9px,1vw,13px)] font-bold text-[#0b0f1e] shadow-[0_3px_0_#0b0f1e]"
+            >
+              {c}
+            </motion.button>
+          ))}
+        </div>
 
         <WallScreen title="Score report" className="right-[2%] top-[20%] h-[56%] w-[30%]">
           <div className="flex h-full flex-col gap-[2%] text-[clamp(8px,0.95vw,13px)]">

@@ -11,6 +11,12 @@ import { STAGES, STAGE_LABELS, outsidePressure, type Stage as MStage } from '../
 import { duckMusic, rumble, sfx } from '../sound.ts';
 import { RocketArt } from '../ui/RocketArt.tsx';
 import { Stage, Starfield } from '../ui/Scenery.tsx';
+import { AnimationSlot } from '../animations/slots.tsx';
+import { crewLine, type Moment } from '../crew.ts';
+import { EVENTS, EVENT_SECONDS } from '../events.ts';
+import { whoDecides } from '../team.ts';
+import { EventPanel } from '../ui/EventPanel.tsx';
+import { SpeechBubble } from '../ui/Pixel.tsx';
 
 const DUR: Record<MStage, number> = {
   launch: 3.4,
@@ -299,7 +305,7 @@ function PressureMeter({ value, ok, label }: { value: number; ok: boolean; label
 }
 
 export function Launch() {
-  const { run, go, markWatched, launchesWatched } = useGame();
+  const { run, go, markWatched, launchesWatched, resolveEvent, team } = useGame();
   const attempt = currentAttempt(run);
   const planet = getPlanet(attempt?.planetId);
   const reduced = useReducedMotion();
@@ -308,7 +314,12 @@ export function Launch() {
   const [idx, setIdx] = useState(-1); // -1 = countdown
   const [done, setDone] = useState(false);
   const told = useRef(false);
+  const [eventAck, setEventAck] = useState(false);
   const result = attempt?.result;
+  const ev = attempt?.event;
+  // The emergency interrupts the start of the journey; the flight waits until the team continues.
+  const eventPending = !!ev && !eventAck;
+  const paused = idx === 1 && eventPending;
   const lastIdx = useMemo(
     () => (result?.failedAt ? STAGES.indexOf(result.failedAt) : STAGES.length - 1),
     [result],
@@ -321,6 +332,7 @@ export function Launch() {
       sfx(count === 0 ? 'go' : 'count');
       t = window.setTimeout(() => (count > 0 ? setCount(count - 1) : setIdx(0)), 650);
     } else {
+      if (paused) return;
       const stage = STAGES[idx];
       const failing = result.failedAt === stage;
       announce(`${STAGE_LABELS[stage]}${failing ? ': failure!' : ''}`);
@@ -331,7 +343,7 @@ export function Launch() {
       );
     }
     return () => window.clearTimeout(t);
-  }, [idx, count, result, lastIdx, done, sound]);
+  }, [idx, count, result, lastIdx, done, sound, paused]);
 
   useEffect(() => {
     if (!sound || idx !== 0) return;
@@ -681,6 +693,11 @@ export function Launch() {
         }[stage]
       : 'Countdown';
 
+  const moment: Moment =
+    idx === -1 ? 'countdown' : paused ? 'event' : done && result.success ? 'home' : stage!;
+  const chatter = crewLine(crew, moment, failing && !paused ? (failCheck?.id ?? null) : null);
+  const event = ev ? EVENTS[ev.id] : null;
+
   return (
     <Stage>
       <div
@@ -700,6 +717,29 @@ export function Launch() {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Reserved for the team's own animations (see src/game/animations/README.md) */}
+      {stage === 'launch' && !failing && <AnimationSlot id="lift-off" />}
+      {stage === 'landing' && !failing && <AnimationSlot id="landing" />}
+      {done && result.success && <AnimationSlot id="homecoming" />}
+      {paused && <AnimationSlot id="emergency" className="z-20" />}
+      {paused && (
+        <motion.div
+          className="pointer-events-none absolute inset-0 z-20 shadow-[inset_0_0_120px_40px_rgba(255,40,40,0.55)]"
+          initial={{ opacity: 0 }}
+          animate={
+            ev?.resolved
+              ? { opacity: 0.25 }
+              : reduced
+                ? { opacity: 0.7 }
+                : { opacity: [0.25, 1, 0.25] }
+          }
+          transition={
+            ev?.resolved || reduced ? { duration: 0.4 } : { duration: 1, repeat: Infinity }
+          }
+          aria-hidden="true"
+        />
+      )}
 
       {/* Caption */}
       <motion.div
@@ -772,12 +812,32 @@ export function Launch() {
         </div>
       </div>
 
+      {/* Crew chatter */}
+      <div className="absolute bottom-[3%] left-[1.5%] z-10 max-w-[34%]">
+        <SpeechBubble
+          speaker={chatter.probe ? '🤖 Probe' : `👩‍🚀 ${chatter.speaker}`}
+          text={chatter.text}
+          className="text-[clamp(10px,1vw,13px)]"
+        />
+      </div>
+
+      {paused && event && (
+        <EventPanel
+          event={event}
+          seconds={EVENT_SECONDS[run!.difficulty]}
+          who={whoDecides(team, event.role)}
+          answered={ev?.resolved ? ev.choice : undefined}
+          onAnswer={resolveEvent}
+          onContinue={() => setEventAck(true)}
+        />
+      )}
+
       <div className="absolute bottom-[3%] left-1/2 flex -translate-x-1/2 gap-2">
-        {!done && launchesWatched > 0 && (
+        {!done && !paused && launchesWatched > 0 && (
           <button
             type="button"
             className="tool-btn px-3 py-1 text-[12px]"
-            onClick={() => setDone(true)}
+            onClick={() => (eventPending && idx < 1 ? setIdx(1) : setDone(true))}
           >
             Skip ⏭
           </button>

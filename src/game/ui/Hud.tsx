@@ -75,6 +75,14 @@ export function TopMenu() {
       <IconButton label="Leaderboard" onClick={() => go('leaderboard')}>
         🏆
       </IconButton>
+      {player && (
+        <IconButton
+          label="Collection: postcards, badges and crew photos"
+          onClick={() => go('collection')}
+        >
+          🏅
+        </IconButton>
+      )}
       <IconButton
         label={sound ? 'Mute sound' : 'Turn sound on'}
         onClick={toggleSound}

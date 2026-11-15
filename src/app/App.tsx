@@ -8,6 +8,8 @@ import { Login } from '../game/screens/Login.tsx';
 import { Mission } from '../game/screens/Mission.tsx';
 import { Result } from '../game/screens/Result.tsx';
 import { Summary } from '../game/screens/Summary.tsx';
+import { Puzzle } from '../game/screens/Puzzle.tsx';
+import { Collection } from '../game/screens/Collection.tsx';
 import { takeStorageNotice } from '../store/persistence.ts';
 import { useGame, type Screen } from '../store/gameStore.ts';
 import { ErrorBoundary } from './ErrorBoundary.tsx';
@@ -59,6 +61,8 @@ const SCREENS: Record<Screen, () => React.JSX.Element | null> = {
   result: Result,
   summary: Summary,
   leaderboard: Leaderboard,
+  puzzle: Puzzle,
+  collection: Collection,
 };
 
 const TITLES: Record<Screen, string> = {
@@ -69,6 +73,8 @@ const TITLES: Record<Screen, string> = {
   result: 'Mission report',
   summary: 'Campaign summary',
   leaderboard: 'Leaderboard',
+  puzzle: 'Fix my rocket',
+  collection: 'Collection',
 };
 
 export function App() {

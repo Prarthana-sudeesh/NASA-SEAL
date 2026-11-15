@@ -13,10 +13,20 @@ import {
   type Dials,
   type Result,
 } from '../game/engine.ts';
+import { pickEvent, type EventId, EVENTS } from '../game/events.ts';
+import { MAX_TEAM, type Team } from '../game/team.ts';
 import { safeStorage, setStorageNotice, uid } from './persistence.ts';
 
 export type Screen =
-  'login' | 'mission' | 'build' | 'launch' | 'result' | 'summary' | 'leaderboard';
+  | 'login'
+  | 'mission'
+  | 'build'
+  | 'launch'
+  | 'result'
+  | 'summary'
+  | 'leaderboard'
+  | 'puzzle'
+  | 'collection';
 
 export interface Player {
   username: string;
@@ -30,6 +40,10 @@ export interface Attempt {
   dials: Dials;
   result: Result;
   quiz: { id: string; correct: boolean } | null;
+  /** Surprise emergency during the journey (absent if none happened). */
+  event?: { id: EventId; choice: number | null; resolved: boolean };
+  /** Team members who flew this mission (team mode only). */
+  team?: string[];
   at: string;
 }
 
@@ -62,6 +76,7 @@ export interface GameState {
   step: BuildStep;
   quiz: QuizAnswer | null;
   launchesWatched: number;
+  team: Team | null;
 
   go: (s: Screen) => void;
   signIn: (p: Player) => void;
@@ -80,6 +95,10 @@ export interface GameState {
   next: () => void;
   newCampaign: () => void;
   markSubmitted: (id: string) => void;
+  /** Answer the current flight's emergency (null = ran out of time). */
+  resolveEvent: (choice: number | null) => void;
+  /** Start team mode with these player names (first = signed-in player), or null for solo. */
+  setTeam: (members: string[] | null) => void;
 }
 
 const newRun = (difficulty: Difficulty): Run => ({
@@ -102,6 +121,7 @@ const initial = {
   step: 'parts' as BuildStep,
   quiz: null as QuizAnswer | null,
   launchesWatched: 0,
+  team: null as Team | null,
 };
 
 export const useGame = create<GameState>()(
@@ -155,13 +175,19 @@ export const useGame = create<GameState>()(
         const answered =
           answer && answer.planetId === planet.id && answer.mission === n ? answer.choice : null;
         const correct = answered === null ? null : answered === q.answer;
+        const result = simulate(build, dials, planet, difficulty, correct);
+        // An emergency can strike once the rocket has left Earth.
+        const eventId = result.failedAt === 'launch' ? null : pickEvent(`${run.id}:${n}`);
+        const team = get().team;
         const attempt: Attempt = {
           n,
           planetId: planet.id,
           build,
           dials,
-          result: simulate(build, dials, planet, difficulty, correct),
+          result,
           quiz: correct === null ? null : { id: q.id, correct },
+          ...(eventId ? { event: { id: eventId, choice: null, resolved: false } } : {}),
+          ...(team && team.members.length > 1 ? { team: team.members } : {}),
           at: new Date().toISOString(),
         };
         set({
@@ -182,6 +208,30 @@ export const useGame = create<GameState>()(
       newCampaign: () =>
         set((s) => ({ run: newRun(s.difficulty), screen: 'mission', step: 'parts' })),
       markSubmitted: (id) => set((s) => (s.run ? { run: { ...s.run, submittedEntryId: id } } : {})),
+      resolveEvent: (choice) => {
+        const run = get().run;
+        const a = run?.attempts.at(-1);
+        const planet = getPlanet(a?.planetId);
+        if (!run || !a?.event || a.event.resolved || !planet) return;
+        const handled = choice !== null && choice === EVENTS[a.event.id].answer;
+        const updated: Attempt = {
+          ...a,
+          event: { ...a.event, choice, resolved: true },
+          result: simulate(
+            a.build,
+            a.dials,
+            planet,
+            run.difficulty,
+            a.quiz ? a.quiz.correct : null,
+            handled,
+          ),
+        };
+        set({ run: { ...run, attempts: [...run.attempts.slice(0, -1), updated] } });
+      },
+      setTeam: (members) =>
+        set({
+          team: members && members.length > 1 ? { members: members.slice(0, MAX_TEAM) } : null,
+        }),
     }),
     {
       name: 'rocket-builder:v2',
@@ -199,6 +249,7 @@ export const useGame = create<GameState>()(
         step: s.step,
         quiz: s.quiz,
         launchesWatched: s.launchesWatched,
+        team: s.team,
       }),
       merge: (persisted, current) => {
         if (!persisted) return current;
