@@ -4,7 +4,7 @@ name: Deploy app to GitHub Pages
 
 on:
   push:
-    branches: [Prototype-2, main]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

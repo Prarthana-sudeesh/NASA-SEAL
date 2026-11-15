@@ -23,7 +23,7 @@ The game covers five themes:
 - **On claude.ai (shared leaderboard):** open the team's hosted link. Scores from everyone it's shared with
   appear on one online leaderboard.
 - **As an installable app:** open the GitHub Pages link
-  (https://prarthana-sudeesh.github.io/NASA-SEAL-PROJECT/ once Pages is enabled), then press **📲 Install**
+  (https://prarthana-sudeesh.github.io/NASA-SEAL/ once Pages is enabled), then press **📲 Install**
   (Chrome/Edge on computers and Android) or **Share → Add to Home Screen** (iPhone/iPad). The installed app
   opens full-screen in landscape and works offline.
 
