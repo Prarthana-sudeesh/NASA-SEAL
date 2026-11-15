@@ -1,6 +1,8 @@
 // Splashdown: only the crew capsule comes home. It drifts down under three parachutes, splashes into
 // the ocean, bobs on the waves, the crew pops out to wave and a recovery boat arrives.
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
+import { sfx } from '../sound.ts';
 import { useReducedMotion } from '../../hooks/useReducedMotion.ts';
 import { Astronaut } from './Pixel.tsx';
 
@@ -49,8 +51,24 @@ function Capsule() {
   );
 }
 
-export function Splashdown({ crew }: { crew: number }) {
+export function Splashdown({ crew, onSplash }: { crew: number; onSplash?: () => void }) {
   const reduced = useReducedMotion();
+  // Sound track of the splashdown: chutes open, splash, hatch, boat horn, seagulls.
+  useEffect(() => {
+    const at = (s: number, fn: () => void) => window.setTimeout(fn, s * 1000);
+    const timers = [
+      at(0.25, () => sfx('parachute')),
+      at(FALL, () => {
+        sfx('splash');
+        onSplash?.();
+      }),
+      ...(crew > 0 ? [at(FALL + 1.1, () => sfx('hatch'))] : []),
+      at(FALL + 1.9, () => sfx('horn')),
+      at(FALL + 2.8, () => sfx('seagull')),
+    ];
+    return () => timers.forEach((t) => window.clearTimeout(t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const t = (s: number) => (reduced ? 0 : s);
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -111,36 +129,6 @@ export function Splashdown({ crew }: { crew: number }) {
         />
       ))}
 
-      {/* recovery boat */}
-      <motion.div
-        className="absolute bottom-[24%] w-[14%]"
-        initial={{ left: '105%' }}
-        animate={{ left: '64%', y: reduced ? 0 : [0, -3, 0] }}
-        transition={{
-          left: { delay: t(FALL + 0.6), duration: t(2.4), ease: 'easeOut' },
-          y: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
-        }}
-      >
-        <svg viewBox="0 0 120 50" className="w-full">
-          <path d="M4 30 H116 L104 48 H16 Z" fill="#f2f2f2" stroke="#3a4c80" strokeWidth="2" />
-          <rect x="4" y="34" width="112" height="4" fill="#ff5a4a" />
-          <rect
-            x="40"
-            y="12"
-            width="40"
-            height="18"
-            fill="#ffffff"
-            stroke="#3a4c80"
-            strokeWidth="2"
-          />
-          <rect x="46" y="16" width="8" height="6" fill="#9fdfff" />
-          <rect x="58" y="16" width="8" height="6" fill="#9fdfff" />
-          <rect x="70" y="16" width="6" height="6" fill="#9fdfff" />
-          <rect x="58" y="2" width="3" height="10" fill="#3a4c80" />
-          <path d="M61 2 L74 6 L61 9 Z" fill="#ffb35a" />
-        </svg>
-      </motion.div>
-
       {/* capsule under parachutes: falls, then bobs on the water */}
       <motion.div
         className="absolute left-[34%] w-[14%]"
@@ -192,6 +180,42 @@ export function Splashdown({ crew }: { crew: number }) {
         animate={reduced ? undefined : { x: ['-2%', '2%', '-2%'] }}
         transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
       />
+
+      {/* recovery boat */}
+      <motion.div
+        className="absolute bottom-[25%] z-[1] w-[14%]"
+        initial={{ left: '105%' }}
+        animate={{ left: '64%', y: reduced ? 0 : [0, -3, 0] }}
+        transition={{
+          left: { delay: t(FALL + 0.6), duration: t(2.4), ease: 'easeOut' },
+          y: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
+        }}
+      >
+        {/* white foam where the hull meets the water */}
+        <motion.div
+          className="absolute -bottom-[6%] left-[-8%] h-[22%] w-[116%] rounded-[50%] bg-white/70 blur-[1px]"
+          animate={reduced ? undefined : { scaleX: [1, 1.08, 1], opacity: [0.6, 0.9, 0.6] }}
+          transition={{ duration: 1.4, repeat: Infinity }}
+        />
+        <svg viewBox="0 0 120 50" className="relative w-full">
+          <path d="M4 30 H116 L104 48 H16 Z" fill="#f2f2f2" stroke="#3a4c80" strokeWidth="2" />
+          <rect x="4" y="34" width="112" height="4" fill="#ff5a4a" />
+          <rect
+            x="40"
+            y="12"
+            width="40"
+            height="18"
+            fill="#ffffff"
+            stroke="#3a4c80"
+            strokeWidth="2"
+          />
+          <rect x="46" y="16" width="8" height="6" fill="#9fdfff" />
+          <rect x="58" y="16" width="8" height="6" fill="#9fdfff" />
+          <rect x="70" y="16" width="6" height="6" fill="#9fdfff" />
+          <rect x="58" y="2" width="3" height="10" fill="#3a4c80" />
+          <path d="M61 2 L74 6 L61 9 Z" fill="#ffb35a" />
+        </svg>
+      </motion.div>
 
       {/* splash: spray drops and spreading ripples at touchdown */}
       {!reduced && (

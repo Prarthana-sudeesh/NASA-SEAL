@@ -22,7 +22,7 @@ type Load =
   { s: 'loading' } | { s: 'ready'; rows: LeaderboardEntry[] } | { s: 'error'; msg: string };
 
 export function Leaderboard() {
-  const { difficulty, go, run } = useGame();
+  const { go } = useGame();
   const mine = useSettings((s) => s.myEntryIds);
   const [tab, setTab] = useState<Difficulty | 'all'>('all');
   const [load, setLoad] = useState<Load>({ s: 'loading' });
@@ -56,8 +56,7 @@ export function Leaderboard() {
     };
   }, [tab, reload]);
 
-  const back =
-    run && run.attempts.length >= 10 && run.difficulty === difficulty ? 'summary' : 'mission';
+  const back = 'mission';
   const tabLabel = tab === 'all' ? 'All difficulties' : DIFFICULTIES[tab].label;
   return (
     <Stage>

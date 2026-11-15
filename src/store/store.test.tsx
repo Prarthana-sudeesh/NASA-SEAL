@@ -18,20 +18,23 @@ const GOOD = {
 describe('game store', () => {
   beforeEach(() => resetGameStore());
 
-  it('records 10 launches per campaign, then shows the summary', () => {
+  it('counts every mission flown, across difficulties, with no campaign limit', () => {
     const s = useGame.getState();
     s.signIn({ username: 'Ace', email: 'ace@x.org' });
     s.choosePlanet('proxima-cen-b');
     s.setBuild(GOOD);
     s.setDials({ fuel: 72, thrust: 66, pressure: 1 });
-    for (let i = 0; i < ATTEMPTS_PER_RUN; i++) useGame.getState().launch();
-    expect(useGame.getState().run!.attempts).toHaveLength(ATTEMPTS_PER_RUN);
-    expect(useGame.getState().run!.attempts.every((a) => a.result.success)).toBe(true);
+    for (let i = 0; i < ATTEMPTS_PER_RUN + 2; i++) useGame.getState().launch();
+    expect(useGame.getState().missionsFlown).toBe(ATTEMPTS_PER_RUN + 2);
     useGame.getState().next();
-    expect(useGame.getState().screen).toBe('summary');
-    // An 11th launch starts a fresh campaign.
-    useGame.getState().launch();
-    expect(useGame.getState().run!.attempts).toHaveLength(1);
+    expect(useGame.getState().screen).toBe('mission');
+    // Switching difficulty does not reset the count.
+    useGame.getState().chooseDifficulty('medium');
+    useGame.getState().chooseDifficulty('easy');
+    useGame.getState().choosePlanet('proxima-cen-b');
+    const a = useGame.getState().launch()!;
+    expect(useGame.getState().missionsFlown).toBe(ATTEMPTS_PER_RUN + 3);
+    expect(a.total).toBe(ATTEMPTS_PER_RUN + 3);
   });
 
   it('refuses to launch an unfinished rocket', () => {

@@ -336,6 +336,65 @@ const EFFECTS = {
     burst({ type: 'bandpass', freq: 600, to: 4000, dur: 0.35, vol: 0.18, q: 4 });
     tone({ type: 'square', freq: 2000, dur: 0.04, vol: 0.04, at: 0.1 });
   },
+  /** Heavy touchdown on a planet. */
+  thud: () => {
+    tone({ type: 'sine', freq: 110, to: 38, dur: 0.5, vol: 0.45, attack: 0.005 });
+    burst({ type: 'lowpass', freq: 400, to: 90, dur: 0.45, vol: 0.4, brownian: true });
+  },
+  /** Capsule hitting the ocean. */
+  splash: () => {
+    burst({ type: 'lowpass', freq: 2200, to: 300, dur: 1.2, vol: 0.45, attack: 0.01 });
+    burst({ type: 'highpass', freq: 3500, dur: 0.6, vol: 0.12, at: 0.05 });
+    for (let i = 0; i < 6; i++)
+      tone({
+        type: 'sine',
+        freq: 500 + Math.random() * 700,
+        to: 1400,
+        dur: 0.08,
+        vol: 0.05,
+        at: 0.5 + i * 0.12,
+      });
+  },
+  /** Parachutes snapping open. */
+  parachute: () => {
+    burst({ type: 'bandpass', freq: 900, to: 300, dur: 0.25, vol: 0.35, q: 2 });
+    burst({ type: 'bandpass', freq: 500, to: 2000, dur: 0.9, vol: 0.1, q: 1, at: 0.2 });
+  },
+  /** Recovery boat horn. */
+  horn: () => {
+    tone({ type: 'sawtooth', freq: 146.8, dur: 0.9, vol: 0.09, attack: 0.08 });
+    tone({ type: 'sawtooth', freq: 185, dur: 0.9, vol: 0.06, attack: 0.08 });
+  },
+  /** Capsule hatch opening. */
+  hatch: () => {
+    tone({ type: 'square', freq: 180, dur: 0.06, vol: 0.08 });
+    burst({ type: 'highpass', freq: 3000, dur: 0.7, vol: 0.14, at: 0.08, attack: 0.03 });
+  },
+  seagull: () => {
+    tone({ type: 'triangle', freq: 1400, to: 2100, dur: 0.18, vol: 0.05 });
+    tone({ type: 'triangle', freq: 1500, to: 2300, dur: 0.16, vol: 0.05, at: 0.25 });
+  },
+  /** Sparkly chime for a new badge or postcard. */
+  badge: () => {
+    [1046.5, 1318.5, 1568, 2093].forEach((f, i) =>
+      tone({ type: 'triangle', freq: f, at: i * 0.07, dur: 0.35, vol: 0.07 }),
+    );
+  },
+  /** A hazard panel swooping in. */
+  whooshIn: () => {
+    burst({ type: 'bandpass', freq: 3000, to: 250, dur: 0.45, vol: 0.2, q: 3 });
+    tone({ type: 'sawtooth', freq: 70, to: 45, dur: 0.5, vol: 0.12 });
+  },
+  /** Something hard hitting the hull. */
+  impact: () => {
+    burst({ type: 'lowpass', freq: 900, to: 120, dur: 0.4, vol: 0.5, brownian: true });
+    tone({ type: 'square', freq: 220, to: 70, dur: 0.25, vol: 0.08 });
+  },
+  /** Rubber stamp (postcard collected). */
+  stamp: () => {
+    burst({ type: 'lowpass', freq: 600, dur: 0.12, vol: 0.4, brownian: true });
+    tone({ type: 'sine', freq: 140, to: 80, dur: 0.12, vol: 0.2 });
+  },
 } as const;
 
 export type SfxName = keyof typeof EFFECTS;

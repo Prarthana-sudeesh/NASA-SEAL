@@ -62,6 +62,7 @@ export function Puzzle() {
     if (!puzzle || answer) return;
     const ok = pick === puzzle.faulty;
     sfx(ok ? 'correct' : 'wrong');
+    if (!ok) sfx('impact');
     const points = puzzlePoints(ok, left);
     setAnswers((a) => [...a, { pick, points }]);
     announce(

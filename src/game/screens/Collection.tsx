@@ -8,6 +8,7 @@ import { useGame } from '../../store/gameStore.ts';
 import { BADGES, postcardFacts } from '../collection.ts';
 import { DIFFICULTIES } from '../config.ts';
 import { CREW } from '../crew.ts';
+import { sfx } from '../sound.ts';
 import { Pill, TopMenu } from '../ui/Hud.tsx';
 import { ASTRO_PALETTE, ASTRONAUT, PixelGrid } from '../ui/Pixel.tsx';
 import { CommandCenter, Stage, WallScreen } from '../ui/Scenery.tsx';
@@ -107,7 +108,10 @@ export function Collection() {
                           <button
                             type="button"
                             disabled={!got}
-                            onClick={() => setOpen(id)}
+                            onClick={() => {
+                              sfx('stamp');
+                              setOpen(id);
+                            }}
                             className={`flex w-full flex-col items-center gap-1 rounded-lg border-2 p-2 ${got ? 'border-[#ffe24a]/70 bg-[#fff6dc]/10 hover:bg-[#fff6dc]/20' : 'border-white/10 bg-black/20'}`}
                             aria-label={
                               got ? `Postcard from ${p.name}` : `${p.name}: not collected yet`

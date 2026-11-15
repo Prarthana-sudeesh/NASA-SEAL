@@ -45,6 +45,7 @@ import {
 import { Dial } from '../ui/Dial.tsx';
 import { QuizPanel } from '../ui/QuizPanel.tsx';
 import { FuelRange } from '../ui/FuelRange.tsx';
+import { useShake } from '../ui/useShake.ts';
 import { DIAL_ROLE, ROLES, SLOT_ROLE, rolesOf, whoDecides } from '../team.ts';
 import { BigButton, TopMenu } from '../ui/Hud.tsx';
 import { Astronaut, Scientist, SpeechBubble } from '../ui/Pixel.tsx';
@@ -228,6 +229,7 @@ export function Build() {
   const members = team && team.members.length > 1 ? team.members : [];
   const allGo = members.every((m) => votes[m]);
   const [tool, setTool] = useState<SlotKind>('payload');
+  const { controls: cam, shake } = useShake();
   const [dragging, setDragging] = useState<string | null>(null);
   const [flash, setFlash] = useState(0);
   const sensors = useSensors(
@@ -265,6 +267,7 @@ export function Build() {
     setTool(part.kind);
     setFlash((f) => f + 1);
     sfx('snap');
+    shake(3, 0.25);
     announce(`${part.name} fitted as ${SLOT_LABELS[part.kind].toLowerCase()}.`);
   };
   const onDragEnd = (e: DragEndEvent) => {
@@ -284,375 +287,377 @@ export function Build() {
 
   return (
     <Stage>
-      <LaunchPad>
-        <TopMenu />
-        <DndContext
-          sensors={sensors}
-          onDragStart={(e) => {
-            sfx('pickup');
-            setDragging((e.active.data.current?.partId as string) ?? null);
-          }}
-          onDragEnd={onDragEnd}
-          onDragCancel={() => setDragging(null)}
-        >
-          {/* Planet data card (top-left) */}
-          <section
-            aria-label="Planet data"
-            className="absolute left-[1.5%] top-[2%] z-10 w-[21%] rounded-lg border-2 border-white/30 bg-[#0b2a52]/80 p-[1%] text-[clamp(8px,0.9vw,12px)] text-white backdrop-blur"
+      <motion.div className="absolute inset-0" animate={cam}>
+        <LaunchPad>
+          <TopMenu />
+          <DndContext
+            sensors={sensors}
+            onDragStart={(e) => {
+              sfx('pickup');
+              setDragging((e.active.data.current?.partId as string) ?? null);
+            }}
+            onDragEnd={onDragEnd}
+            onDragCancel={() => setDragging(null)}
           >
-            <button
-              type="button"
-              onClick={() => go('mission')}
-              className="mb-1 text-[#ffe24a] underline"
+            {/* Planet data card (top-left) */}
+            <section
+              aria-label="Planet data"
+              className="absolute left-[1.5%] top-[2%] z-10 w-[21%] rounded-lg border-2 border-white/30 bg-[#0b2a52]/80 p-[1%] text-[clamp(8px,0.9vw,12px)] text-white backdrop-blur"
             >
-              ◂ Mission control
-            </button>
-            <div className="title-font text-[clamp(11px,1.4vw,18px)]">{planet.name}</div>
-            <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-[2px]">
-              <dt className="text-[#b9d8ff]">Distance</dt>
-              <dd className="flex items-center justify-end gap-1">
-                {planet.distanceLy.value} ly <Badge source="nasa" />
-              </dd>
-              <dt className="text-[#b9d8ff]">Gravity</dt>
-              <dd className="flex items-center justify-end gap-1">
-                {planet.surfaceGravityG.value} g <Badge source="model" />
-              </dd>
-              <dt className="text-[#b9d8ff]">Temperature</dt>
-              <dd className="flex items-center justify-end gap-1">
-                {Math.round(planet.eqTempK.value)} K <Badge source="nasa" />
-              </dd>
-              <dt className="text-[#b9d8ff]">Atmosphere</dt>
-              <dd className="flex items-center justify-end gap-1">
-                {ATMOSPHERE_INFO[planet.atmosphere.value].label} <Badge source="model" />
-              </dd>
-              <dt className="text-[#b9d8ff]">Outside pressure</dt>
-              <dd className="flex items-center justify-end gap-1">
-                {outsidePressure(planet)} atm <Badge source="model" />
-              </dd>
-              <dt className="text-[#b9d8ff]">Budget</dt>
-              <dd
-                className={`text-right font-bold ${cost > cfg.budget ? 'text-[#ff6b6b]' : 'text-[#ffb35a]'}`}
+              <button
+                type="button"
+                onClick={() => go('mission')}
+                className="mb-1 text-[#ffe24a] underline"
               >
-                {cost} / {cfg.budget}
-              </dd>
-            </dl>
-          </section>
-
-          {p && (
-            <div className="absolute left-[1.5%] top-[40%] z-10 w-[21%]">
-              <FuelRange build={build} dials={dials} planet={planet} />
-            </div>
-          )}
-
-          <RocketDrop build={build} highlight={step === 'parts' ? tool : null} flash={flash} />
-
-          {/* Right side: toolbar + drawer (parts) or dials */}
-          <AnimatePresence initial={false}>
-            {step === 'parts' ? (
-              <motion.div
-                key="parts"
-                initial={{ x: 60, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 60, opacity: 0 }}
-                className="absolute right-[1.2%] top-[11%] z-10 flex h-[72%] gap-[0.6vw]"
-              >
-                <section
-                  aria-label={`${SLOT_LABELS[tool]} options`}
-                  className="flex w-[clamp(170px,22vw,300px)] flex-col rounded-lg border-2 border-white/30 bg-[#0b2a52]/85 p-[3%] backdrop-blur"
+                ◂ Mission control
+              </button>
+              <div className="title-font text-[clamp(11px,1.4vw,18px)]">{planet.name}</div>
+              <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-[2px]">
+                <dt className="text-[#b9d8ff]">Distance</dt>
+                <dd className="flex items-center justify-end gap-1">
+                  {planet.distanceLy.value} ly <Badge source="nasa" />
+                </dd>
+                <dt className="text-[#b9d8ff]">Gravity</dt>
+                <dd className="flex items-center justify-end gap-1">
+                  {planet.surfaceGravityG.value} g <Badge source="model" />
+                </dd>
+                <dt className="text-[#b9d8ff]">Temperature</dt>
+                <dd className="flex items-center justify-end gap-1">
+                  {Math.round(planet.eqTempK.value)} K <Badge source="nasa" />
+                </dd>
+                <dt className="text-[#b9d8ff]">Atmosphere</dt>
+                <dd className="flex items-center justify-end gap-1">
+                  {ATMOSPHERE_INFO[planet.atmosphere.value].label} <Badge source="model" />
+                </dd>
+                <dt className="text-[#b9d8ff]">Outside pressure</dt>
+                <dd className="flex items-center justify-end gap-1">
+                  {outsidePressure(planet)} atm <Badge source="model" />
+                </dd>
+                <dt className="text-[#b9d8ff]">Budget</dt>
+                <dd
+                  className={`text-right font-bold ${cost > cfg.budget ? 'text-[#ff6b6b]' : 'text-[#ffb35a]'}`}
                 >
-                  <h2 className="font-pixel mb-2 text-[clamp(7px,0.8vw,10px)] uppercase tracking-wider text-[#ffe24a]">
-                    {SLOT_LABELS[tool]}
+                  {cost} / {cfg.budget}
+                </dd>
+              </dl>
+            </section>
+
+            {p && (
+              <div className="absolute left-[1.5%] top-[40%] z-10 w-[21%]">
+                <FuelRange build={build} dials={dials} planet={planet} />
+              </div>
+            )}
+
+            <RocketDrop build={build} highlight={step === 'parts' ? tool : null} flash={flash} />
+
+            {/* Right side: toolbar + drawer (parts) or dials */}
+            <AnimatePresence initial={false}>
+              {step === 'parts' ? (
+                <motion.div
+                  key="parts"
+                  initial={{ x: 60, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: 60, opacity: 0 }}
+                  className="absolute right-[1.2%] top-[11%] z-10 flex h-[72%] gap-[0.6vw]"
+                >
+                  <section
+                    aria-label={`${SLOT_LABELS[tool]} options`}
+                    className="flex w-[clamp(170px,22vw,300px)] flex-col rounded-lg border-2 border-white/30 bg-[#0b2a52]/85 p-[3%] backdrop-blur"
+                  >
+                    <h2 className="font-pixel mb-2 text-[clamp(7px,0.8vw,10px)] uppercase tracking-wider text-[#ffe24a]">
+                      {SLOT_LABELS[tool]}
+                    </h2>
+                    {whoDecides(team, SLOT_ROLE[tool]) && (
+                      <p className="-mt-1 mb-2 text-[clamp(8px,0.85vw,11px)] text-[#9fdfff]">
+                        {whoDecides(team, SLOT_ROLE[tool])} decides
+                      </p>
+                    )}
+                    <ul className="flex min-h-0 flex-1 flex-col gap-[3%] overflow-y-auto pr-1">
+                      {partsOf(tool).map((part) => (
+                        <PartCard
+                          key={part.id}
+                          part={part}
+                          fitted={build[tool] === part.id}
+                          onAdd={() => fit(part.id)}
+                        />
+                      ))}
+                    </ul>
+                    {tool === 'payload' && (
+                      <div className="mt-2 rounded-md bg-black/30 p-2 text-[clamp(8px,0.9vw,12px)] text-white">
+                        <div className="flex items-center justify-between">
+                          <span>Astronauts</span>
+                          <span className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              className="tool-btn px-2"
+                              aria-label="Remove astronaut"
+                              onClick={() =>
+                                setBuild({ ...build, crew: Math.max(0, build.crew - 1) })
+                              }
+                            >
+                              −
+                            </button>
+                            <output
+                              className="w-5 text-center font-bold"
+                              aria-label="Astronauts on board"
+                            >
+                              {build.crew}
+                            </output>
+                            <button
+                              type="button"
+                              className="tool-btn px-2"
+                              aria-label="Add astronaut"
+                              disabled={build.crew >= Math.min(seats, cfg.maxCrew)}
+                              onClick={() => setBuild({ ...build, crew: build.crew + 1 })}
+                            >
+                              +
+                            </button>
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[#b9d8ff]">
+                          {seats
+                            ? `Success: score × ${(1 + SCORING.crewBonus * build.crew).toFixed(1)}. Failure: −${SCORING.crewPenalty} each.`
+                            : 'Fit the crew capsule to bring astronauts.'}
+                        </p>
+                      </div>
+                    )}
+                  </section>
+                  <nav
+                    aria-label="Part categories"
+                    className="flex flex-col gap-[0.5vw] rounded-lg bg-[#0b2a52]/70 p-[0.4vw]"
+                  >
+                    {SLOT_ORDER.map((k) => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setTool(k)}
+                        aria-pressed={tool === k}
+                        aria-label={`${SLOT_LABELS[k]}${build[k] ? ' (fitted)' : ''}`}
+                        title={SLOT_LABELS[k]}
+                        className={`relative grid h-[clamp(34px,3.8vw,52px)] w-[clamp(34px,3.8vw,52px)] place-items-center rounded-md border-2 ${tool === k ? 'border-[#ffe24a] bg-[#2d6fb8]' : 'border-white/40 bg-[#14417a]'}`}
+                      >
+                        <PartIcon id={SLOT_ICONS[k]} size={30} />
+                        {build[k] && (
+                          <span className="absolute -right-1 -top-1 grid h-3.5 w-3.5 place-items-center rounded-full bg-[#3ddc84] text-[8px] font-bold text-[#0b0f1e]">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </nav>
+                </motion.div>
+              ) : step === 'quiz' ? (
+                <QuizPanel
+                  key="quiz"
+                  planet={planet}
+                  mission={mission}
+                  choice={quizChoice}
+                  onAnswer={answerQuiz}
+                  who={whoDecides(team, 'scientist')}
+                />
+              ) : (
+                <motion.section
+                  key="dials"
+                  aria-label="Mission dials"
+                  initial={{ x: 60, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: 60, opacity: 0 }}
+                  className="absolute right-[1.2%] top-[10%] z-10 flex w-[clamp(190px,24vw,320px)] flex-col items-center gap-[2%] rounded-lg border-2 border-white/30 bg-[#0b2a52]/85 p-[1.2%] backdrop-blur"
+                >
+                  <h2 className="font-pixel text-[clamp(7px,0.8vw,10px)] uppercase tracking-wider text-[#ffe24a]">
+                    Set the dials
                   </h2>
-                  {whoDecides(team, SLOT_ROLE[tool]) && (
-                    <p className="-mt-1 mb-2 text-[clamp(8px,0.85vw,11px)] text-[#9fdfff]">
-                      {whoDecides(team, SLOT_ROLE[tool])} decides
+                  {members.length > 0 && (
+                    <p className="text-center text-[clamp(8px,0.85vw,11px)] text-[#9fdfff]">
+                      Fuel &amp; thrust: {whoDecides(team, DIAL_ROLE.fuel)}
+                      <br />
+                      Pressure: {whoDecides(team, DIAL_ROLE.pressure)}
                     </p>
                   )}
-                  <ul className="flex min-h-0 flex-1 flex-col gap-[3%] overflow-y-auto pr-1">
-                    {partsOf(tool).map((part) => (
-                      <PartCard
-                        key={part.id}
-                        part={part}
-                        fitted={build[tool] === part.id}
-                        onAdd={() => fit(part.id)}
-                      />
-                    ))}
-                  </ul>
-                  {tool === 'payload' && (
-                    <div className="mt-2 rounded-md bg-black/30 p-2 text-[clamp(8px,0.9vw,12px)] text-white">
-                      <div className="flex items-center justify-between">
-                        <span>Astronauts</span>
-                        <span className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            className="tool-btn px-2"
-                            aria-label="Remove astronaut"
-                            onClick={() =>
-                              setBuild({ ...build, crew: Math.max(0, build.crew - 1) })
-                            }
-                          >
-                            −
-                          </button>
-                          <output
-                            className="w-5 text-center font-bold"
-                            aria-label="Astronauts on board"
-                          >
-                            {build.crew}
-                          </output>
-                          <button
-                            type="button"
-                            className="tool-btn px-2"
-                            aria-label="Add astronaut"
-                            disabled={build.crew >= Math.min(seats, cfg.maxCrew)}
-                            onClick={() => setBuild({ ...build, crew: build.crew + 1 })}
-                          >
-                            +
-                          </button>
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[#b9d8ff]">
-                        {seats
-                          ? `Success: score × ${(1 + SCORING.crewBonus * build.crew).toFixed(1)}. Failure: −${SCORING.crewPenalty} each.`
-                          : 'Fit the crew capsule to bring astronauts.'}
-                      </p>
-                    </div>
-                  )}
-                </section>
-                <nav
-                  aria-label="Part categories"
-                  className="flex flex-col gap-[0.5vw] rounded-lg bg-[#0b2a52]/70 p-[0.4vw]"
-                >
-                  {SLOT_ORDER.map((k) => (
-                    <button
-                      key={k}
-                      type="button"
-                      onClick={() => setTool(k)}
-                      aria-pressed={tool === k}
-                      aria-label={`${SLOT_LABELS[k]}${build[k] ? ' (fitted)' : ''}`}
-                      title={SLOT_LABELS[k]}
-                      className={`relative grid h-[clamp(34px,3.8vw,52px)] w-[clamp(34px,3.8vw,52px)] place-items-center rounded-md border-2 ${tool === k ? 'border-[#ffe24a] bg-[#2d6fb8]' : 'border-white/40 bg-[#14417a]'}`}
-                    >
-                      <PartIcon id={SLOT_ICONS[k]} size={30} />
-                      {build[k] && (
-                        <span className="absolute -right-1 -top-1 grid h-3.5 w-3.5 place-items-center rounded-full bg-[#3ddc84] text-[8px] font-bold text-[#0b0f1e]">
-                          ✓
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </nav>
-              </motion.div>
-            ) : step === 'quiz' ? (
-              <QuizPanel
-                key="quiz"
-                planet={planet}
-                mission={mission}
-                choice={quizChoice}
-                onAnswer={answerQuiz}
-                who={whoDecides(team, 'scientist')}
-              />
-            ) : (
-              <motion.section
-                key="dials"
-                aria-label="Mission dials"
-                initial={{ x: 60, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 60, opacity: 0 }}
-                className="absolute right-[1.2%] top-[10%] z-10 flex w-[clamp(190px,24vw,320px)] flex-col items-center gap-[2%] rounded-lg border-2 border-white/30 bg-[#0b2a52]/85 p-[1.2%] backdrop-blur"
-              >
-                <h2 className="font-pixel text-[clamp(7px,0.8vw,10px)] uppercase tracking-wider text-[#ffe24a]">
-                  Set the dials
-                </h2>
-                {members.length > 0 && (
-                  <p className="text-center text-[clamp(8px,0.85vw,11px)] text-[#9fdfff]">
-                    Fuel &amp; thrust: {whoDecides(team, DIAL_ROLE.fuel)}
-                    <br />
-                    Pressure: {whoDecides(team, DIAL_ROLE.pressure)}
-                  </p>
-                )}
-                <div className="grid grid-cols-2 gap-x-2 gap-y-1">
-                  <Dial
-                    label="Fuel"
-                    unit="% full"
-                    value={dials.fuel}
-                    min={0}
-                    max={100}
-                    step={1}
-                    onChange={(v) => setDials({ fuel: v })}
-                    zone={zones?.fuel}
-                    size={110}
-                  />
-                  <Dial
-                    label="Thrust"
-                    unit="% power"
-                    value={dials.thrust}
-                    min={0}
-                    max={100}
-                    step={1}
-                    onChange={(v) => setDials({ thrust: v })}
-                    zone={zones?.thrust}
-                    size={110}
-                  />
-                  <div className="col-span-2 flex justify-center">
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                     <Dial
-                      label="Pressure seal"
-                      unit="atm"
-                      value={dials.pressure}
+                      label="Fuel"
+                      unit="% full"
+                      value={dials.fuel}
                       min={0}
-                      max={TUNING.pressureMax}
-                      step={0.5}
-                      onChange={(v) => setDials({ pressure: v })}
-                      zone={zones?.pressure}
+                      max={100}
+                      step={1}
+                      onChange={(v) => setDials({ fuel: v })}
+                      zone={zones?.fuel}
                       size={110}
                     />
+                    <Dial
+                      label="Thrust"
+                      unit="% power"
+                      value={dials.thrust}
+                      min={0}
+                      max={100}
+                      step={1}
+                      onChange={(v) => setDials({ thrust: v })}
+                      zone={zones?.thrust}
+                      size={110}
+                    />
+                    <div className="col-span-2 flex justify-center">
+                      <Dial
+                        label="Pressure seal"
+                        unit="atm"
+                        value={dials.pressure}
+                        min={0}
+                        max={TUNING.pressureMax}
+                        step={0.5}
+                        onChange={(v) => setDials({ pressure: v })}
+                        zone={zones?.pressure}
+                        size={110}
+                      />
+                    </div>
                   </div>
-                </div>
-                {liveChecks.length > 0 && (
-                  <ul
-                    aria-label="Flight checks"
-                    className="mt-1 grid w-full grid-cols-2 gap-x-2 gap-y-0.5 text-[clamp(8px,0.8vw,11px)] text-white"
-                  >
-                    {liveChecks.map((c) => (
-                      <li key={c.id} className={c.ok ? 'text-ok' : 'text-[#ff8a8a]'}>
-                        {c.ok ? '✓' : '✕'} {c.label}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {cfg.hints === 'none' && (
-                  <p className="text-center text-[11px] text-[#b9d8ff]">
-                    Hard mode: no flight checks shown. Trust your maths!
-                  </p>
-                )}
-                {members.length > 0 && (
-                  <div className="w-full border-t border-white/20 pt-1 text-white">
-                    <p className="font-pixel text-center text-[clamp(7px,0.75vw,9px)] uppercase tracking-wider text-[#ffe24a]">
-                      Go / No-Go poll
-                    </p>
+                  {liveChecks.length > 0 && (
                     <ul
-                      className="mt-1 flex flex-wrap justify-center gap-1"
-                      aria-label="Team launch vote"
+                      aria-label="Flight checks"
+                      className="mt-1 grid w-full grid-cols-2 gap-x-2 gap-y-0.5 text-[clamp(8px,0.8vw,11px)] text-white"
                     >
-                      {members.map((m, i) => (
-                        <li key={m}>
-                          <button
-                            type="button"
-                            aria-pressed={!!votes[m]}
-                            onClick={() => {
-                              sfx(votes[m] ? 'click' : 'confirm');
-                              setVotes((v) => ({ ...v, [m]: !v[m] }));
-                            }}
-                            className={`rounded-md border-2 px-2 py-0.5 text-[clamp(8px,0.85vw,12px)] font-bold ${votes[m] ? 'border-ok bg-ok/30' : 'border-white/40 bg-black/30'}`}
-                            title={rolesOf(team!, i)
-                              .map((r) => ROLES[r].title)
-                              .join(' + ')}
-                          >
-                            {m}: {votes[m] ? 'GO ✓' : 'GO?'}
-                          </button>
+                      {liveChecks.map((c) => (
+                        <li key={c.id} className={c.ok ? 'text-ok' : 'text-[#ff8a8a]'}>
+                          {c.ok ? '✓' : '✕'} {c.label}
                         </li>
                       ))}
                     </ul>
-                  </div>
-                )}
-              </motion.section>
-            )}
-          </AnimatePresence>
+                  )}
+                  {cfg.hints === 'none' && (
+                    <p className="text-center text-[11px] text-[#b9d8ff]">
+                      Hard mode: no flight checks shown. Trust your maths!
+                    </p>
+                  )}
+                  {members.length > 0 && (
+                    <div className="w-full border-t border-white/20 pt-1 text-white">
+                      <p className="font-pixel text-center text-[clamp(7px,0.75vw,9px)] uppercase tracking-wider text-[#ffe24a]">
+                        Go / No-Go poll
+                      </p>
+                      <ul
+                        className="mt-1 flex flex-wrap justify-center gap-1"
+                        aria-label="Team launch vote"
+                      >
+                        {members.map((m, i) => (
+                          <li key={m}>
+                            <button
+                              type="button"
+                              aria-pressed={!!votes[m]}
+                              onClick={() => {
+                                sfx(votes[m] ? 'click' : 'confirm');
+                                setVotes((v) => ({ ...v, [m]: !v[m] }));
+                              }}
+                              className={`rounded-md border-2 px-2 py-0.5 text-[clamp(8px,0.85vw,12px)] font-bold ${votes[m] ? 'border-ok bg-ok/30' : 'border-white/40 bg-black/30'}`}
+                              title={rolesOf(team!, i)
+                                .map((r) => ROLES[r].title)
+                                .join(' + ')}
+                            >
+                              {m}: {votes[m] ? 'GO ✓' : 'GO?'}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </motion.section>
+              )}
+            </AnimatePresence>
 
-          <DragOverlay
-            dropAnimation={{ duration: 280, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.4)' }}
-          >
-            {dragged ? (
-              <div className="flex items-center gap-2 rounded-lg border-2 border-[#ffe24a] bg-[#0d2547] p-2 text-[12px] font-bold text-white shadow-2xl">
-                <PartIcon id={dragged.id} size={40} />
-                {dragged.name}
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-
-        {/* Crew + scientist hint (bottom-left) */}
-        <div className="absolute bottom-[3%] left-[1.5%] w-[6%]">
-          <Astronaut name={player?.username} enter={false} />
-        </div>
-        <div className="absolute bottom-[3%] left-[8.5%] w-[5.5%]">
-          <Scientist enter={false} />
-        </div>
-        <div className="absolute bottom-[27%] left-[4%] z-10 max-w-[30%]">
-          <SpeechBubble
-            speaker="Dr. Hart"
-            text={hintFor(step, build, planet, cfg.hints, missing)}
-          />
-        </div>
-
-        {/* Readout bar + main action */}
-        <div className="absolute bottom-[2.5%] left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-[0.4vw]">
-          <div className="outlined flex gap-[1.2vw] whitespace-nowrap text-[clamp(9px,1.1vw,15px)] font-bold tabular-nums">
-            <span>Thrust/W: {twr.toFixed(2)}</span>
-            <span>Mass: {totalMass.toFixed(1)}t</span>
-            <span>Fuel: {p ? fuelLoad(p, dials).toFixed(0) : 0}t</span>
-            <span className={cost > cfg.budget ? 'text-[#ff8a8a]' : ''}>
-              Cost: {cost}/{cfg.budget}
-            </span>
-          </div>
-          {step === 'parts' ? (
-            <BigButton
-              onClick={() => setStep(quizChoice === null ? 'quiz' : 'dials')}
-              disabled={missing.length > 0}
-              className="text-[clamp(16px,2.4vw,32px)]"
+            <DragOverlay
+              dropAnimation={{ duration: 280, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.4)' }}
             >
-              {quizChoice === null ? 'SCIENCE CHECK ▸' : 'SET DIALS ▸'}
-            </BigButton>
-          ) : step === 'quiz' ? (
-            <div className="flex items-center gap-[1vw]">
-              <button
-                type="button"
-                className="tool-btn px-3 py-1 text-[12px]"
-                onClick={() => setStep('parts')}
-              >
-                ◂ Parts
-              </button>
+              {dragged ? (
+                <div className="flex items-center gap-2 rounded-lg border-2 border-[#ffe24a] bg-[#0d2547] p-2 text-[12px] font-bold text-white shadow-2xl">
+                  <PartIcon id={dragged.id} size={40} />
+                  {dragged.name}
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+
+          {/* Crew + scientist hint (bottom-left) */}
+          <div className="absolute bottom-[3%] left-[1.5%] w-[6%]">
+            <Astronaut name={player?.username} enter={false} />
+          </div>
+          <div className="absolute bottom-[3%] left-[8.5%] w-[5.5%]">
+            <Scientist enter={false} />
+          </div>
+          <div className="absolute bottom-[27%] left-[4%] z-10 max-w-[30%]">
+            <SpeechBubble
+              speaker="Dr. Hart"
+              text={hintFor(step, build, planet, cfg.hints, missing)}
+            />
+          </div>
+
+          {/* Readout bar + main action */}
+          <div className="absolute bottom-[2.5%] left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-[0.4vw]">
+            <div className="outlined flex gap-[1.2vw] whitespace-nowrap text-[clamp(9px,1.1vw,15px)] font-bold tabular-nums">
+              <span>Thrust/W: {twr.toFixed(2)}</span>
+              <span>Mass: {totalMass.toFixed(1)}t</span>
+              <span>Fuel: {p ? fuelLoad(p, dials).toFixed(0) : 0}t</span>
+              <span className={cost > cfg.budget ? 'text-[#ff8a8a]' : ''}>
+                Cost: {cost}/{cfg.budget}
+              </span>
+            </div>
+            {step === 'parts' ? (
               <BigButton
-                onClick={() => setStep('dials')}
-                disabled={quizChoice === null}
+                onClick={() => setStep(quizChoice === null ? 'quiz' : 'dials')}
+                disabled={missing.length > 0}
                 className="text-[clamp(16px,2.4vw,32px)]"
               >
-                SET DIALS ▸
+                {quizChoice === null ? 'SCIENCE CHECK ▸' : 'SET DIALS ▸'}
               </BigButton>
-            </div>
-          ) : (
-            <div className="flex items-center gap-[1vw]">
-              <button
-                type="button"
-                className="tool-btn px-3 py-1 text-[12px]"
-                onClick={() => setStep('parts')}
-              >
-                ◂ Parts
-              </button>
-              <BigButton
-                onClick={() => {
-                  const a = launch();
-                  if (a) announce(`Launching mission ${a.n} to ${planet.name}.`);
-                }}
-                disabled={blocks.length > 0 || !allGo}
-                describedBy={blocks.length ? 'launch-blocks' : !allGo ? 'launch-vote' : undefined}
-                className="text-[clamp(20px,3vw,42px)]"
-              >
-                LAUNCH
-              </BigButton>
-            </div>
-          )}
-          {blocks.length === 0 && !allGo && step === 'dials' && (
-            <p id="launch-vote" className="outlined text-[12px] text-[#ffe24a]">
-              Waiting for the whole team to say GO.
-            </p>
-          )}
-          {blocks.length > 0 && step === 'dials' && (
-            <p id="launch-blocks" role="alert" className="outlined text-[12px] text-[#ff8a8a]">
-              {blocks.join(' ')}
-            </p>
-          )}
-        </div>
-      </LaunchPad>
+            ) : step === 'quiz' ? (
+              <div className="flex items-center gap-[1vw]">
+                <button
+                  type="button"
+                  className="tool-btn px-3 py-1 text-[12px]"
+                  onClick={() => setStep('parts')}
+                >
+                  ◂ Parts
+                </button>
+                <BigButton
+                  onClick={() => setStep('dials')}
+                  disabled={quizChoice === null}
+                  className="text-[clamp(16px,2.4vw,32px)]"
+                >
+                  SET DIALS ▸
+                </BigButton>
+              </div>
+            ) : (
+              <div className="flex items-center gap-[1vw]">
+                <button
+                  type="button"
+                  className="tool-btn px-3 py-1 text-[12px]"
+                  onClick={() => setStep('parts')}
+                >
+                  ◂ Parts
+                </button>
+                <BigButton
+                  onClick={() => {
+                    const a = launch();
+                    if (a) announce(`Launching mission ${a.n} to ${planet.name}.`);
+                  }}
+                  disabled={blocks.length > 0 || !allGo}
+                  describedBy={blocks.length ? 'launch-blocks' : !allGo ? 'launch-vote' : undefined}
+                  className="text-[clamp(20px,3vw,42px)]"
+                >
+                  LAUNCH
+                </BigButton>
+              </div>
+            )}
+            {blocks.length === 0 && !allGo && step === 'dials' && (
+              <p id="launch-vote" className="outlined text-[12px] text-[#ffe24a]">
+                Waiting for the whole team to say GO.
+              </p>
+            )}
+            {blocks.length > 0 && step === 'dials' && (
+              <p id="launch-blocks" role="alert" className="outlined text-[12px] text-[#ff8a8a]">
+                {blocks.join(' ')}
+              </p>
+            )}
+          </div>
+        </LaunchPad>
+      </motion.div>
     </Stage>
   );
 }

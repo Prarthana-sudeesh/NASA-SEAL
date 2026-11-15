@@ -6,13 +6,14 @@ import { getPlanet } from '../../data/planets.ts';
 import type { Planet } from '../../data/types.ts';
 import { DIFFICULTY_IDS } from '../../data/types.ts';
 import { useGame } from '../../store/gameStore.ts';
-import { ATTEMPTS_PER_RUN, DIFFICULTIES, partsOf, type Difficulty } from '../config.ts';
+import { DIFFICULTIES, partsOf, type Difficulty } from '../config.ts';
 import { outsidePressure } from '../engine.ts';
 import { BigButton, Pill, Readout, TopMenu } from '../ui/Hud.tsx';
 import { Astronaut, Scientist, SpeechBubble } from '../ui/Pixel.tsx';
 import { CommandCenter, Hologram, Stage, WallScreen } from '../ui/Scenery.tsx';
 import { AnimationSlot } from '../animations/slots.tsx';
 import { TeamPanel } from '../ui/TeamPanel.tsx';
+import { sfx } from '../sound.ts';
 
 type Tab = 'level' | 'description' | 'stats' | 'resources';
 const TABS: { id: Tab; label: string }[] = [
@@ -123,16 +124,14 @@ export function Mission() {
     chooseDifficulty,
     choosePlanet,
     go,
-    newCampaign,
     team,
+    missionsFlown,
   } = useGame();
   const [line, setLine] = useState(0);
   const [teamOpen, setTeamOpen] = useState(false);
   const cfg = DIFFICULTIES[difficulty];
   const planet = getPlanet(planetId) ?? getPlanet(cfg.planets[0])!;
   const activeRun = run && run.difficulty === difficulty ? run : null;
-  const done = activeRun?.attempts.length ?? 0;
-  const totals = activeRun?.attempts.map((a) => a.result.total) ?? [];
   const name = player?.username ?? 'Engineer';
 
   const briefing = [
@@ -161,8 +160,7 @@ export function Mission() {
             ['Temperature', `${Math.round(planet.eqTempK.value)} K`],
             ['Atmosphere', ATMOSPHERE_INFO[planet.atmosphere.value].label],
             ['Max crew', String(cfg.maxCrew)],
-            ['Mission', `${Math.min(done + 1, ATTEMPTS_PER_RUN)} / ${ATTEMPTS_PER_RUN}`],
-            ['Average', String(avg(totals))],
+            ['Missions flown', String(missionsFlown)],
             ...(team ? [['Team', `${team.members.length} players`] as [string, string]] : []),
           ]}
         />
@@ -179,7 +177,14 @@ export function Mission() {
           <div className="flex h-full flex-col gap-[3%] text-[clamp(8px,0.95vw,13px)]">
             <div className="flex gap-[3%]" role="group" aria-label="Difficulty">
               {DIFFICULTY_IDS.map((d) => (
-                <Pill key={d} active={d === difficulty} onClick={() => chooseDifficulty(d)}>
+                <Pill
+                  key={d}
+                  active={d === difficulty}
+                  onClick={() => {
+                    if (d !== difficulty) sfx('whooshIn');
+                    chooseDifficulty(d);
+                  }}
+                >
                   {DIFFICULTIES[d].label}
                 </Pill>
               ))}
@@ -253,12 +258,7 @@ export function Mission() {
             BUILD ROCKET
           </BigButton>
           <div className="outlined text-[clamp(9px,1vw,14px)] font-bold">
-            Mission {Math.min(done + 1, ATTEMPTS_PER_RUN)}/{ATTEMPTS_PER_RUN} · Avg {avg(totals)}
-            {done > 0 && (
-              <button type="button" className="ml-2 underline" onClick={newCampaign}>
-                restart campaign
-              </button>
-            )}
+            Next up: mission #{missionsFlown + 1}
           </div>
         </div>
         {/* Extra modes */}

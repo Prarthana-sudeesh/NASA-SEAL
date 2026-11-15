@@ -13,7 +13,8 @@ import { RocketArt } from '../ui/RocketArt.tsx';
 import { Stage, Starfield } from '../ui/Scenery.tsx';
 import { AnimationSlot } from '../animations/slots.tsx';
 import { crewLine, type Moment } from '../crew.ts';
-import { EVENT_SECONDS, HAZARDS, type HazardScene as SceneKind } from '../events.ts';
+import { EVENT_SECONDS, HAZARDS, handled, type HazardScene as SceneKind } from '../events.ts';
+import { useShake } from '../ui/useShake.ts';
 import { HazardScene } from '../ui/HazardScene.tsx';
 import { EarthArt } from '../ui/EarthArt.tsx';
 import { Splashdown } from '../ui/Splashdown.tsx';
@@ -315,6 +316,7 @@ export function Launch() {
   const planet = getPlanet(attempt?.planetId);
   const reduced = useReducedMotion();
   const sound = useSettings((s) => s.sound);
+  const { controls: cam, shake } = useShake();
   const [count, setCount] = useState(COUNT);
   const [idx, setIdx] = useState(-1); // -1 = countdown
   const [done, setDone] = useState(false);
@@ -344,8 +346,47 @@ export function Launch() {
       alarm: 'alarm',
     };
     sfx(ONE_SHOT[hazardScene]);
+    sfx('whooshIn');
+    shake(12, 0.6);
     return hazardLoop(hazardScene);
-  }, [hazardScene, pendingIdx, sound]);
+  }, [hazardScene, pendingIdx, sound, shake]);
+  // A wrong answer (or running out of time) jolts the ship.
+  const curResolved = !!cur?.resolved;
+  const curHandled = cur ? handled(cur) : false;
+  useEffect(() => {
+    if (curResolved && !curHandled) {
+      shake(9, 0.45);
+      sfx('impact');
+    }
+  }, [curResolved, curHandled, shake]);
+  // Camera shake that follows the flight: countdown rumble, lift-off, touchdown, re-entry.
+  const failedAt = result?.failedAt ?? null;
+  useEffect(() => {
+    if (!result || done) return;
+    if (idx === -1) {
+      if (count <= 2) shake(2 + (2 - count) * 2, 0.55);
+      return;
+    }
+    if (paused) return;
+    const stage = STAGES[idx];
+    if (failedAt === stage) {
+      shake(16, 1.2);
+      return;
+    }
+    const timers: number[] = [];
+    if (stage === 'launch') shake(10, DUR.launch * 0.8);
+    if (stage === 'landing')
+      timers.push(
+        window.setTimeout(() => {
+          shake(10, 0.4);
+          sfx('thud');
+        }, DUR.landing * 700),
+      );
+    if (stage === 'ascent') shake(7, 1.2);
+    if (stage === 'return') shake(4, DUR.return);
+    return () => timers.forEach((t) => window.clearTimeout(t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, count, paused, failedAt, done, shake]);
   // Epic voyage music once the rocket is in space; calm music again back at mission control.
   useEffect(() => {
     if (idx >= 1) setMusicMode('travel');
@@ -659,7 +700,8 @@ export function Launch() {
       }
       case 'return':
         // Safe home: only the crew capsule comes back, under parachutes, into the ocean.
-        if (done && result.success) return <Splashdown crew={crew} />;
+        if (done && result.success)
+          return <Splashdown crew={crew} onSplash={() => shake(10, 0.5)} />;
         return space(
           <>
             <motion.div
@@ -736,176 +778,178 @@ export function Launch() {
 
   return (
     <Stage>
-      <div
-        className={`absolute inset-0 ${failing && !reduced ? 'animate-[shake_0.3s_ease-in-out_3]' : ''}`}
-        aria-hidden="true"
-      >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={
-              idx === -1 || stage === 'launch'
-                ? 'launch'
-                : stage === 'return' && done && result.success
-                  ? 'splashdown'
-                  : stage!
-            }
-            className="absolute inset-0"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.35 }}
-          >
-            {scene}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
-      {/* Reserved for the team's own animations (see src/game/animations/README.md) */}
-      {stage === 'launch' && !failing && <AnimationSlot id="lift-off" />}
-      {stage === 'landing' && !failing && <AnimationSlot id="landing" />}
-      {done && result.success && <AnimationSlot id="homecoming" />}
-      <AnimatePresence>
-        {hazardScene && <HazardScene key={pendingIdx} kind={hazardScene} />}
-      </AnimatePresence>
-      {paused && <AnimationSlot id="emergency" className="z-20" />}
-      {paused && (
-        <motion.div
-          className="pointer-events-none absolute inset-0 z-20 shadow-[inset_0_0_120px_40px_rgba(255,40,40,0.55)]"
-          initial={{ opacity: 0 }}
-          animate={
-            cur?.resolved
-              ? { opacity: 0.25 }
-              : reduced
-                ? { opacity: 0.7 }
-                : { opacity: [0.25, 1, 0.25] }
-          }
-          transition={
-            cur?.resolved || reduced ? { duration: 0.4 } : { duration: 1, repeat: Infinity }
-          }
+      <motion.div className="absolute inset-0" animate={cam}>
+        <div
+          className={`absolute inset-0 ${failing && !reduced ? 'animate-[shake_0.3s_ease-in-out_3]' : ''}`}
           aria-hidden="true"
-        />
-      )}
-
-      {/* Caption */}
-      <motion.div
-        key={caption}
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className={`outlined absolute left-1/2 top-[3%] -translate-x-1/2 whitespace-nowrap text-[clamp(12px,1.8vw,24px)] font-black ${failing ? 'text-[#ff8a8a]' : ''}`}
-        role="status"
-      >
-        {caption}
-      </motion.div>
-
-      {/* Mission tracker */}
-      <ol
-        aria-label="Mission status"
-        className="absolute left-[1.5%] top-[12%] flex flex-col gap-[0.4vw]"
-      >
-        {STAGES.map((s, i) => {
-          const cur = stage === s;
-          const cleared = stage ? i < STAGES.indexOf(stage) || (done && result.success) : false;
-          const bad = result.failedAt === s && (cur || done);
-          return (
-            <li
-              key={s}
-              className={`rounded-md border px-[0.6vw] py-[0.2vw] text-[clamp(8px,0.85vw,12px)] font-bold ${bad ? 'border-bad bg-bad/30 text-white' : cur ? 'border-[#ffe24a] bg-[#ffe24a]/25 text-white' : cleared ? 'border-ok/60 text-ok' : 'border-white/20 text-white/60'}`}
-            >
-              {bad ? '✕' : cleared ? '✓' : cur ? '▶' : '·'} {STAGE_LABELS[s]}
-            </li>
-          );
-        })}
-      </ol>
-
-      {/* Instruments */}
-      <div className="absolute bottom-[3%] right-[1.5%] flex w-[30%] gap-[0.8vw] rounded-xl border border-white/20 bg-black/55 p-[0.8vw] text-white backdrop-blur">
-        <div className="w-1/3">
-          <PressureMeter
-            value={pressureValue}
-            ok={pressureOk}
-            label={`Seal ${attempt.dials.pressure} atm`}
-          />
-        </div>
-        <div className="flex w-1/3 flex-col items-center">
-          <div className="text-[clamp(8px,0.85vw,12px)] text-white/70">Fuel</div>
-          <div className="mt-1 flex h-[clamp(36px,5vw,70px)] w-[40%] flex-col justify-end overflow-hidden rounded bg-white/15">
+        >
+          <AnimatePresence mode="wait">
             <motion.div
-              className={`w-full ${fuelFrac < 0.1 ? 'bg-bad' : 'bg-[#ffb35a]'}`}
-              animate={{ height: `${fuelFrac * 100}%` }}
-              transition={{ duration: 0.8 }}
+              key={
+                idx === -1 || stage === 'launch'
+                  ? 'launch'
+                  : stage === 'return' && done && result.success
+                    ? 'splashdown'
+                    : stage!
+              }
+              className="absolute inset-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35 }}
+            >
+              {scene}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Reserved for the team's own animations (see src/game/animations/README.md) */}
+        {stage === 'launch' && !failing && <AnimationSlot id="lift-off" />}
+        {stage === 'landing' && !failing && <AnimationSlot id="landing" />}
+        {done && result.success && <AnimationSlot id="homecoming" />}
+        <AnimatePresence>
+          {hazardScene && <HazardScene key={pendingIdx} kind={hazardScene} />}
+        </AnimatePresence>
+        {paused && <AnimationSlot id="emergency" className="z-20" />}
+        {paused && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 z-20 shadow-[inset_0_0_120px_40px_rgba(255,40,40,0.55)]"
+            initial={{ opacity: 0 }}
+            animate={
+              cur?.resolved
+                ? { opacity: 0.25 }
+                : reduced
+                  ? { opacity: 0.7 }
+                  : { opacity: [0.25, 1, 0.25] }
+            }
+            transition={
+              cur?.resolved || reduced ? { duration: 0.4 } : { duration: 1, repeat: Infinity }
+            }
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Caption */}
+        <motion.div
+          key={caption}
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className={`outlined absolute left-1/2 top-[3%] -translate-x-1/2 whitespace-nowrap text-[clamp(12px,1.8vw,24px)] font-black ${failing ? 'text-[#ff8a8a]' : ''}`}
+          role="status"
+        >
+          {caption}
+        </motion.div>
+
+        {/* Mission tracker */}
+        <ol
+          aria-label="Mission status"
+          className="absolute left-[1.5%] top-[12%] flex flex-col gap-[0.4vw]"
+        >
+          {STAGES.map((s, i) => {
+            const cur = stage === s;
+            const cleared = stage ? i < STAGES.indexOf(stage) || (done && result.success) : false;
+            const bad = result.failedAt === s && (cur || done);
+            return (
+              <li
+                key={s}
+                className={`rounded-md border px-[0.6vw] py-[0.2vw] text-[clamp(8px,0.85vw,12px)] font-bold ${bad ? 'border-bad bg-bad/30 text-white' : cur ? 'border-[#ffe24a] bg-[#ffe24a]/25 text-white' : cleared ? 'border-ok/60 text-ok' : 'border-white/20 text-white/60'}`}
+              >
+                {bad ? '✕' : cleared ? '✓' : cur ? '▶' : '·'} {STAGE_LABELS[s]}
+              </li>
+            );
+          })}
+        </ol>
+
+        {/* Instruments */}
+        <div className="absolute bottom-[3%] right-[1.5%] flex w-[30%] gap-[0.8vw] rounded-xl border border-white/20 bg-black/55 p-[0.8vw] text-white backdrop-blur">
+          <div className="w-1/3">
+            <PressureMeter
+              value={pressureValue}
+              ok={pressureOk}
+              label={`Seal ${attempt.dials.pressure} atm`}
             />
           </div>
-          <div className="text-[clamp(8px,0.85vw,12px)] font-bold tabular-nums">
-            {Math.round(fuelFrac * 100)}%
+          <div className="flex w-1/3 flex-col items-center">
+            <div className="text-[clamp(8px,0.85vw,12px)] text-white/70">Fuel</div>
+            <div className="mt-1 flex h-[clamp(36px,5vw,70px)] w-[40%] flex-col justify-end overflow-hidden rounded bg-white/15">
+              <motion.div
+                className={`w-full ${fuelFrac < 0.1 ? 'bg-bad' : 'bg-[#ffb35a]'}`}
+                animate={{ height: `${fuelFrac * 100}%` }}
+                transition={{ duration: 0.8 }}
+              />
+            </div>
+            <div className="text-[clamp(8px,0.85vw,12px)] font-bold tabular-nums">
+              {Math.round(fuelFrac * 100)}%
+            </div>
+          </div>
+          <div className="flex w-1/3 flex-col items-center text-center">
+            <div className="text-[clamp(8px,0.85vw,12px)] text-white/70">Crew</div>
+            <div className="text-[clamp(14px,1.6vw,22px)]" aria-label={`${crew} astronauts`}>
+              {crew ? '👩‍🚀'.repeat(crew) : '🤖'}
+            </div>
+            <div className="text-[clamp(8px,0.85vw,12px)] font-bold">
+              {crew ? (
+                <>
+                  <span className="text-ok">×{(1 + SCORING.crewBonus * crew).toFixed(1)}</span> /{' '}
+                  <span className="text-bad">−{SCORING.crewPenalty * crew}</span>
+                </>
+              ) : (
+                '×1.0'
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex w-1/3 flex-col items-center text-center">
-          <div className="text-[clamp(8px,0.85vw,12px)] text-white/70">Crew</div>
-          <div className="text-[clamp(14px,1.6vw,22px)]" aria-label={`${crew} astronauts`}>
-            {crew ? '👩‍🚀'.repeat(crew) : '🤖'}
-          </div>
-          <div className="text-[clamp(8px,0.85vw,12px)] font-bold">
-            {crew ? (
-              <>
-                <span className="text-ok">×{(1 + SCORING.crewBonus * crew).toFixed(1)}</span> /{' '}
-                <span className="text-bad">−{SCORING.crewPenalty * crew}</span>
-              </>
-            ) : (
-              '×1.0'
-            )}
-          </div>
+
+        {/* Crew chatter */}
+        <div className="absolute bottom-[3%] left-[1.5%] z-10 max-w-[34%]">
+          <SpeechBubble
+            speaker={chatter.probe ? '🤖 Probe' : `👩‍🚀 ${chatter.speaker}`}
+            text={chatter.text}
+            className="text-[clamp(10px,1vw,13px)]"
+          />
         </div>
-      </div>
 
-      {/* Crew chatter */}
-      <div className="absolute bottom-[3%] left-[1.5%] z-10 max-w-[34%]">
-        <SpeechBubble
-          speaker={chatter.probe ? '🤖 Probe' : `👩‍🚀 ${chatter.speaker}`}
-          text={chatter.text}
-          className="text-[clamp(10px,1vw,13px)]"
-        />
-      </div>
-
-      {cur && hazard && (
-        <EventPanel
-          key={pendingIdx}
-          event={cur}
-          counter={evs.length > 1 ? `Hazard ${pendingIdx + 1} of ${evs.length}` : null}
-          seconds={EVENT_SECONDS[run!.difficulty]}
-          who={whoDecides(team, hazard.role)}
-          onAnswer={onAnswer}
-          onContinue={() => {
-            sfx('quindarOut');
-            setAcked((a) => [...a, pendingIdx]);
-          }}
-        />
-      )}
-
-      <div className="absolute bottom-[3%] left-1/2 flex -translate-x-1/2 gap-2">
-        {!done && !paused && launchesWatched > 0 && (
-          <button
-            type="button"
-            className="tool-btn px-3 py-1 text-[12px]"
-            onClick={() =>
-              nextUnacked >= 0 ? setIdx(STAGES.indexOf(evs[nextUnacked].stage)) : setDone(true)
-            }
-          >
-            Skip ⏭
-          </button>
+        {cur && hazard && (
+          <EventPanel
+            key={pendingIdx}
+            event={cur}
+            counter={evs.length > 1 ? `Hazard ${pendingIdx + 1} of ${evs.length}` : null}
+            seconds={EVENT_SECONDS[run!.difficulty]}
+            who={whoDecides(team, hazard.role)}
+            onAnswer={onAnswer}
+            onContinue={() => {
+              sfx('quindarOut');
+              setAcked((a) => [...a, pendingIdx]);
+            }}
+          />
         )}
-        {done && (
-          <motion.button
-            type="button"
-            className="big-btn text-[clamp(16px,2.4vw,32px)]"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            onClick={() => go('result')}
-            autoFocus
-          >
-            {result.success ? 'MISSION REPORT ▸' : 'WHAT WENT WRONG? ▸'}
-          </motion.button>
-        )}
-      </div>
+
+        <div className="absolute bottom-[3%] left-1/2 flex -translate-x-1/2 gap-2">
+          {!done && !paused && launchesWatched > 0 && (
+            <button
+              type="button"
+              className="tool-btn px-3 py-1 text-[12px]"
+              onClick={() =>
+                nextUnacked >= 0 ? setIdx(STAGES.indexOf(evs[nextUnacked].stage)) : setDone(true)
+              }
+            >
+              Skip ⏭
+            </button>
+          )}
+          {done && (
+            <motion.button
+              type="button"
+              className="big-btn text-[clamp(16px,2.4vw,32px)]"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              onClick={() => go('result')}
+              autoFocus
+            >
+              {result.success ? 'MISSION REPORT ▸' : 'WHAT WENT WRONG? ▸'}
+            </motion.button>
+          )}
+        </div>
+      </motion.div>
     </Stage>
   );
 }

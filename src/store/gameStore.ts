@@ -49,6 +49,8 @@ export interface Attempt {
   team?: string[];
   /** Leaderboard entry this mission was posted as. */
   postedEntryId?: string;
+  /** Lifetime mission number (counts every difficulty). */
+  total?: number;
   at: string;
 }
 
@@ -82,6 +84,8 @@ export interface GameState {
   quiz: QuizAnswer | null;
   launchesWatched: number;
   team: Team | null;
+  /** Missions flown in total, across every difficulty. Never resets when switching levels. */
+  missionsFlown: number;
 
   go: (s: Screen) => void;
   signIn: (p: Player) => void;
@@ -129,6 +133,7 @@ const initial = {
   quiz: null as QuizAnswer | null,
   launchesWatched: 0,
   team: null as Team | null,
+  missionsFlown: 0,
 };
 
 export const useGame = create<GameState>()(
@@ -203,20 +208,21 @@ export const useGame = create<GameState>()(
           quiz: correct === null ? null : { id: q.id, correct },
           ...(events.length ? { events } : {}),
           ...(team && team.members.length > 1 ? { team: team.members } : {}),
+          total: get().missionsFlown + 1,
           at: new Date().toISOString(),
         };
         set({
           run: { ...run, attempts: [...run.attempts, attempt] },
           screen: 'launch',
           quiz: null,
+          missionsFlown: get().missionsFlown + 1,
         });
         return attempt;
       },
       markWatched: () => set((s) => ({ launchesWatched: s.launchesWatched + 1 })),
       next: () => {
-        const run = get().run;
         set({
-          screen: run && run.attempts.length >= ATTEMPTS_PER_RUN ? 'summary' : 'mission',
+          screen: 'mission',
           step: 'parts',
         });
       },
@@ -282,6 +288,7 @@ export const useGame = create<GameState>()(
         quiz: s.quiz,
         launchesWatched: s.launchesWatched,
         team: s.team,
+        missionsFlown: s.missionsFlown,
       }),
       merge: (persisted, current) => {
         if (!persisted) return current;
@@ -290,7 +297,10 @@ export const useGame = create<GameState>()(
           return current;
         }
         const p = persisted as Partial<GameState>;
-        const screen = p.screen === 'launch' ? 'result' : p.screen;
+        const screen =
+          p.screen === 'launch' ? 'result' : p.screen === 'summary' ? 'mission' : p.screen;
+        // Older saves had no lifetime counter: start from the missions in the saved campaign.
+        if (typeof p.missionsFlown !== 'number') p.missionsFlown = p.run?.attempts.length ?? 0;
         return { ...current, ...p, screen: p.player ? (screen ?? 'mission') : 'login' };
       },
     },
