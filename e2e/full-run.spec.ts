@@ -65,7 +65,7 @@ test('a full 10-launch Cadet run ends on the leaderboard', async ({ page }) => {
     } else {
       await expect(page.getByTestId('countdown')).toBeVisible();
       await page.keyboard.press('Escape'); // skip countdown
-      await expect(page.getByTestId('cutscene')).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole('button', { name: /Skip ⏭/ })).toBeVisible({ timeout: 5000 });
       await page.keyboard.press('Escape'); // skip cutscene
     }
     await expect(page.getByTestId('stamp')).toHaveText(n === 10 ? 'MISSION LOST' : 'MISSION SUCCESS');
@@ -118,7 +118,7 @@ for (const [diff, planet] of [
       await page.getByTestId('launch').click();
       await expect(page.getByTestId('countdown')).toBeVisible();
       await page.keyboard.press('Escape');
-      await expect(page.getByTestId('cutscene')).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole('button', { name: /Skip ⏭/ })).toBeVisible({ timeout: 5000 });
       await page.keyboard.press('Escape');
       await expect(page.getByTestId('stamp')).toHaveText('MISSION SUCCESS');
       await page.getByTestId('next').click();

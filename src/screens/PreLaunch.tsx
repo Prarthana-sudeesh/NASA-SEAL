@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useGame } from '../store/game.ts';
 import { getPlanet } from '../data/planets.ts';
 import { evaluateMission, launchBlockers } from '../engine/mission.ts';
+import { outcomeFor } from '../engine/cutscenes.ts';
+import { primeSequence, prefetchSequence } from '../cutscene/sequences.ts';
 import { LAUNCHES_PER_RUN } from '../store/game.ts';
 import { telemetry, type Level } from '../engine/telemetry.ts';
 import { rocketStats } from '../engine/rocket.ts';
@@ -39,6 +41,13 @@ export function PreLaunch() {
   const blockers = launchBlockers(design, d, crew);
   const s = rocketStats(design, crew);
   const [polled, setPolled] = useState(calm ? STATIONS.length : 0);
+
+  // Warm the cache with the cutscene this rocket will most likely get.
+  useEffect(() => {
+    if (!planet || blockers.length) return;
+    prefetchSequence(outcomeFor(evaluateMission(design, planet, d, crew).failure?.cause ?? null), calm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planet?.id, calm]);
 
   useEffect(() => {
     if (calm) return;
@@ -126,7 +135,7 @@ export function PreLaunch() {
           <div className="grid gap-5 sm:grid-cols-2">
             <Card tiltKey="gauge" as="section" className="flex flex-col items-center p-4">
               <h2 className="font-display text-lg">Tank pressure</h2>
-              <Gauge value={prs ? Math.min(1.3, prs.ratio) : 0} label={prs?.value ?? ''} danger={prs?.level === 'bad'} />
+              <Gauge value={prs && prs.level !== 'auto' ? Math.min(1.3, prs.ratio) : 0} label={prs?.level === 'auto' ? 'not checked at this level' : (prs?.value ?? '')} danger={prs?.level === 'bad'} />
             </Card>
             <Card tiltKey="crew" as="section" className="p-4">
               <h2 className="font-display text-lg">Crew gamble</h2>
@@ -169,6 +178,9 @@ export function PreLaunch() {
             // Record now, so a refresh mid-cutscene can't re-roll or double-count the launch.
             const r = evaluateMission(design, planet, d, crew);
             recordAttempt({ planetId: planet.id, design, crew, score: r.score.total, success: r.success, cause: r.failure?.cause ?? null });
+            // Load the cutscene and unlock sound inside this tap (Safari needs a tap to allow sound).
+            const forced = useGame.getState().forcedOutcome;
+            primeSequence(forced ?? outcomeFor(r.failure?.cause ?? null), calm);
             go('launch');
           }}
           data-testid="launch"

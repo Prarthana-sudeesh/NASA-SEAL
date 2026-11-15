@@ -40,7 +40,7 @@ export function validateEntry(e: NewEntry): string | null {
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 // ── localStorage implementation ────────────────────────────────────
-const KEY = 'starbound.leaderboard.v1';
+const KEY = 'orbitaluprise.leaderboard.v1';
 
 export class LocalLeaderboardService implements LeaderboardService {
   kind = 'local' as const;
@@ -112,7 +112,7 @@ export class SupabaseLeaderboardService implements LeaderboardService {
 }
 
 // ── Factory ────────────────────────────────────────────────────────
-export const OFFLINE_FLAG = 'starbound.forceOffline';
+export const OFFLINE_FLAG = 'orbitaluprise.forceOffline';
 
 let cached: LeaderboardService | null = null;
 export function getLeaderboard(): LeaderboardService {

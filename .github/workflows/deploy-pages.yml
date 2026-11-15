@@ -1,4 +1,4 @@
-# Builds STARBOUND and publishes it to GitHub Pages as an installable app.
+# Builds Orbital Uprise and publishes it to GitHub Pages as an installable app.
 # One-time setup: repo Settings → Pages → Source: "GitHub Actions".
 name: Deploy app to GitHub Pages
 

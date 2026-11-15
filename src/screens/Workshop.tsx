@@ -36,7 +36,6 @@ import { CassSays } from '../ui/Cass.tsx';
 import { Button } from '../ui/Button.tsx';
 import { ImaginaryBadge, Redirect, announce, LiveNumber } from '../ui/bits.tsx';
 import { play } from '../audio/audio.ts';
-import { preloadClips } from '../cutscene/manifest.ts';
 import { crewMultiplier } from '../engine/score.ts';
 
 const TABS: { id: Category; icon: string }[] = [
@@ -253,7 +252,6 @@ export function Workshop() {
   const d = difficulty ?? 'easy';
   const cfg = DIFFICULTIES[d];
 
-  useEffect(() => void preloadClips(calm), [calm]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),

@@ -3,6 +3,8 @@ import { useGame, type Screen } from '../store/game.ts';
 import { OUTCOMES, type Outcome } from '../engine/cutscenes.ts';
 import { OFFLINE_FLAG, supabaseConfigured } from '../services/leaderboard.ts';
 import { PLANETS } from '../data/planets.ts';
+import { primeSequence } from '../cutscene/sequences.ts';
+import { isCalm } from '../store/settings.ts';
 
 const SCREENS: Screen[] = ['title', 'briefing', 'difficulty', 'destinations', 'brief', 'workshop', 'prelaunch', 'report', 'progress', 'summary', 'leaderboard', 'settings'];
 
@@ -83,6 +85,7 @@ export default function DebugPanel() {
 
 /** Stand-alone playback of an outcome's sequence (no attempt recorded). */
 function playOutcome(o: Outcome) {
-  sessionStorage.setItem('starbound.testOutcome', o);
+  primeSequence(o, isCalm());
+  sessionStorage.setItem('orbitaluprise.testOutcome', o);
   useGame.getState().go('cutscene-test');
 }

@@ -5,7 +5,7 @@ export function Gauge({ value, label, danger = false, spike = false, size = 150 
   const v = Math.max(0, Math.min(1.3, value)) / 1.3;
   const angle = -90 + v * 180 + (spike ? 22 : 0);
   return (
-    <svg width={size} height={size * 0.65} viewBox="0 0 150 98" role="img" aria-label={`Gauge: ${label}`}>
+    <svg width={size} height={size * 0.65} viewBox="-10 0 170 98" role="img" aria-label={`Gauge: ${label}`}>
       <path d="M 15 85 A 60 60 0 0 1 135 85" fill="none" stroke="#05070F" strokeWidth="16" />
       <path d="M 15 85 A 60 60 0 0 1 104 33" fill="none" stroke="#5BD982" strokeWidth="10" />
       <path d="M 104 33 A 60 60 0 0 1 123 52" fill="none" stroke="#FFB547" strokeWidth="10" />

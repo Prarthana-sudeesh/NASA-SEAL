@@ -22,12 +22,12 @@ export function Splashdown({ nickname, onContinue }: { nickname: string; onConti
           />
         ))}
         <motion.g initial={calm ? { y: 0 } : { y: -620 }} animate={{ y: 0 }} transition={{ duration: calm ? 0 : 2.2, ease: 'easeOut' }}>
-          <g transform="translate(800 330)">
+          <g transform="translate(800 412)">
             {[-90, 0, 90].map((dx, i) => (
               <g key={i}>
-                <path d={`M ${dx - 70} -150 Q ${dx} -250 ${dx + 70} -150 Z`} fill={['#E8642C', '#FFF6E5', '#E8642C'][i]} stroke="#05070F" strokeWidth="5" />
-                <line x1={dx - 70} y1="-150" x2="-20" y2="120" stroke="#05070F" strokeWidth="2" />
-                <line x1={dx + 70} y1="-150" x2="20" y2="120" stroke="#05070F" strokeWidth="2" />
+                <path d={`M ${dx - 62} -112 Q ${dx} -192 ${dx + 62} -112 Z`} fill={['#E8642C', '#FFF6E5', '#E8642C'][i]} stroke="#05070F" strokeWidth="5" />
+                <line x1={dx - 62} y1="-112" x2="-20" y2="120" stroke="#05070F" strokeWidth="2" />
+                <line x1={dx + 62} y1="-112" x2="20" y2="120" stroke="#05070F" strokeWidth="2" />
               </g>
             ))}
             <path d="M -60 230 L -40 120 Q 0 95 40 120 L 60 230 Z" fill="#FFF6E5" stroke="#05070F" strokeWidth="5" />
@@ -35,23 +35,23 @@ export function Splashdown({ nickname, onContinue }: { nickname: string; onConti
           </g>
         </motion.g>
         {!calm && (
-          <motion.g initial={{ opacity: 0, scale: 0.2 }} animate={{ opacity: [0, 1, 0], scale: [0.2, 1.3, 1.6] }} transition={{ delay: 2.1, duration: 1.2 }} style={{ originX: '800px', originY: '570px' }}>
-            <ellipse cx="800" cy="575" rx="160" ry="34" fill="none" stroke="#FFF6E5" strokeWidth="8" />
+          <motion.g initial={{ opacity: 0, scale: 0.2 }} animate={{ opacity: [0, 1, 0], scale: [0.2, 1.3, 1.6] }} transition={{ delay: 2.1, duration: 1.2 }} style={{ originX: '800px', originY: '645px' }}>
+            <ellipse cx="800" cy="645" rx="160" ry="34" fill="none" stroke="#FFF6E5" strokeWidth="8" />
           </motion.g>
         )}
       </svg>
-      <div className="absolute inset-x-0 top-24 text-center">
+      <div className="absolute inset-x-0 top-6 text-center md:top-8">
         <motion.p
           initial={calm ? false : { scale: 0.3, rotate: 10, opacity: 0 }}
           animate={{ scale: 1, rotate: -3, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 220, damping: 12, delay: calm ? 0 : 0.4 }}
-          className="sticker inline-block bg-go px-8 py-4 font-display text-[clamp(2rem,6vw,4.5rem)] font-bold text-ink"
+          className="sticker inline-block bg-go px-6 py-2 font-display text-[clamp(1.8rem,5vw,3.6rem)] font-bold text-ink"
           role="status"
           data-testid="overlay"
         >
           MISSION SUCCESS!
         </motion.p>
-        <p className="mt-4 font-display text-2xl text-cream" style={{ textShadow: '2px 2px 0 #000' }}>
+        <p className="mt-3 font-display text-xl text-cream md:text-2xl" style={{ textShadow: '2px 2px 0 #000' }}>
           Splashdown! Welcome home from {nickname}.
         </p>
       </div>

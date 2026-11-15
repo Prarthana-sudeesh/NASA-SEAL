@@ -28,8 +28,8 @@ export function TopBar() {
     <div className="pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-between gap-2 p-3 md:p-4">
       <div className="pointer-events-auto flex items-center gap-2">
         {screen !== 'title' && (
-          <button className="btn bg-panel-2 px-3 py-1.5 font-display text-lg text-cream" onClick={() => go('title')} aria-label="STARBOUND home">
-            <span className="text-plume">★</span> STARBOUND
+          <button className="btn bg-panel-2 px-3 py-1.5 font-display text-lg text-cream" onClick={() => go('title')} aria-label="Orbital Uprise home">
+            <span className="text-plume">★</span> ORBITAL UPRISE
           </button>
         )}
         {inRun && (

@@ -61,16 +61,16 @@ export function App() {
 
   return (
     <>
-      <Starfield />
+      {!fullBleed && <Starfield />}
       {!fullBleed && <TopBar />}
       <AnimatePresence mode="wait">
         <motion.main
           key={screen}
           className={fullBleed ? 'fixed inset-0' : 'relative mx-auto min-h-dvh w-full max-w-[1500px] px-4 pb-16 pt-20 md:px-8'}
-          initial={calm ? { opacity: 0 } : { opacity: 0, scale: 0.97, clipPath: 'circle(0% at 50% 50%)' }}
-          animate={calm ? { opacity: 1 } : { opacity: 1, scale: 1, clipPath: 'circle(150% at 50% 50%)' }}
-          exit={calm ? { opacity: 0 } : { opacity: 0, scale: 1.02 }}
-          transition={{ duration: calm ? 0.15 : 0.38, ease: [0.2, 0.8, 0.2, 1] }}
+          initial={calm ? { opacity: 0 } : { opacity: 0, y: 18 }}
+          animate={calm ? { opacity: 1 } : { opacity: 1, y: 0 }}
+          exit={calm ? { opacity: 0 } : { opacity: 0, y: -10 }}
+          transition={{ duration: calm ? 0.12 : 0.22, ease: [0.2, 0.8, 0.2, 1] }}
         >
           <Suspense fallback={<p className="p-8 text-center text-muted">Loading…</p>}>
             <Current />

@@ -162,7 +162,7 @@ export function RocketArt({ design, crew, height = 560 }: { design: Design; crew
   const scale = Math.min(1, height / total);
 
   return (
-    <svg viewBox={`0 0 ${W} ${total}`} width={W * scale} height={total * scale} role="img" aria-label="Your rocket" className="overflow-visible drop-shadow-[6px_6px_0_rgba(0,0,0,0.55)]">
+    <svg viewBox={`0 0 ${W} ${total}`} width={W * scale} height={total * scale} role="img" aria-label="Your rocket" className="overflow-visible">
       <AnimatePresence>{parts}</AnimatePresence>
     </svg>
   );

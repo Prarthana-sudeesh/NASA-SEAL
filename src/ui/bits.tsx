@@ -21,7 +21,8 @@ export function Card({
   ...rest
 }: { children: ReactNode; className?: string; tiltKey?: string; hover?: boolean; as?: 'div' | 'section' | 'article' } & React.HTMLAttributes<HTMLElement>) {
   const calm = useCalm();
-  const tilt = tiltKey && !calm ? tiltFor(tiltKey) : 0;
+  // Small hover cards get the full hand-placed tilt; big panels a subtle one so text stays easy to read.
+  const tilt = tiltKey && !calm ? tiltFor(tiltKey, hover ? 1.5 : 0.5) : 0;
   const M = motion[as];
   return (
     <M
