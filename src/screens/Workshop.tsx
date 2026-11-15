@@ -164,7 +164,7 @@ function SlotBox({ slot, part, valid, dim, onTap, onRemove }: { slot: SlotDef; p
       role="group"
       aria-label={`${slot.label} slot${slot.required ? ' (required)' : ''}: ${part ? part.name : 'empty'}`}
     >
-      <p className="w-[6.5rem] shrink-0 text-[0.7rem] font-extrabold uppercase leading-tight tracking-wide text-cyan">
+      <p className="w-[5.6rem] shrink-0 text-[0.66rem] font-extrabold uppercase leading-tight tracking-wide text-cyan">
         {slot.label}
         {slot.required && !part && <span className="block text-amber">required</span>}
       </p>
@@ -371,7 +371,7 @@ export function Workshop() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(280px,340px)_1fr_minmax(280px,340px)]">
         {/* Drawer */}
-        <section className="sticker flex flex-col bg-panel" aria-label="Component drawer">
+        <section className="sticker flex min-w-0 flex-col bg-panel" aria-label="Component drawer">
           <div className="flex flex-wrap gap-1 border-b-[3px] border-ink p-2" role="tablist">
             {TABS.map((t) => (
               <button
@@ -403,13 +403,13 @@ export function Workshop() {
         </section>
 
         {/* Blueprint */}
-        <section className="sticker blueprint relative flex flex-col gap-4 p-4 md:flex-row" aria-label="Rocket blueprint">
-          <div className="flex flex-1 items-start justify-center py-2">
+        <section className="sticker blueprint relative flex min-w-0 flex-col gap-4 p-4 md:flex-row" aria-label="Rocket blueprint">
+          <div className="flex min-w-0 flex-1 items-start justify-center py-2">
             <div className="md:sticky md:top-24">
               <RocketArt design={design} crew={crew} height={600} />
             </div>
           </div>
-          <div className="flex w-full flex-col gap-2 md:w-[46%]">
+          <div className="flex w-full min-w-0 flex-col gap-2 md:w-[60%]">
             {SLOTS.map((slot) => {
               const part = getPart(design[slot.id]);
               const valid = !!activePart && fitsSlot(activePart, slot, slot.id.startsWith('tank') ? engineProp : undefined);
@@ -430,7 +430,7 @@ export function Workshop() {
         </section>
 
         {/* Telemetry */}
-        <section className="sticker flex flex-col gap-3 bg-panel p-3" aria-label="Live telemetry">
+        <section className="sticker flex min-w-0 flex-col gap-3 bg-panel p-3" aria-label="Live telemetry">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-2xl text-cyan">Telemetry</h2>
             <label className="flex items-center gap-2 text-sm font-bold">
@@ -456,7 +456,7 @@ export function Workshop() {
       </div>
 
       {/* Budget bar */}
-      <div className="sticker sticky bottom-3 z-20 mt-6 bg-panel p-3" aria-label="Budget">
+      <div className="sticker z-20 mt-6 bg-panel p-3 lg:sticky lg:bottom-3" aria-label="Budget">
         <div className="mb-1 flex justify-between font-bold">
           <span>Budget</span>
           <span className={`font-mono ${over ? 'text-danger' : 'text-plume'}`}>
