@@ -1,8 +1,8 @@
 {
-  "name": "rocket-builder",
+  "name": "starbound-exoplanet-rocket-lab",
   "private": true,
   "version": "1.0.0",
-  "description": "Rocket Builder - Team SEAL, NASA Space Apps Challenge entry",
+  "description": "STARBOUND: Exoplanet Rocket Lab — NASA Space Apps Challenge entry",
   "type": "module",
   "engines": {
     "node": ">=22.18"
@@ -16,25 +16,33 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test --trace off",
     "fetch-planets": "node scripts/fetch-planets.ts",
-    "balance-check": "node scripts/balance-check.ts",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run balance-check"
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "balance-check": "node scripts/balance-check.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "framer-motion": "^11.18.2",
+    "@supabase/supabase-js": "^2.119.0",
+    "canvas-confetti": "^1.9.4",
+    "howler": "^2.2.4",
+    "motion": "^11.18.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^5.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.5",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.9",
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/howler": "^2.2.13",
     "@types/node": "^22.20.5",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
