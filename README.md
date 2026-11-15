@@ -23,8 +23,10 @@ We want to be upfront about what was made when. The commit history is unedited, 
   the NASA Exoplanet Archive planet-data script with its data files (`scripts/fetch-planets.ts`,
   `src/data/planets.json`, `src/data/planets.ts`, `src/data/types.ts`, `scripts/balance-check.ts`). Most of
   these were rewritten on Nov 15.
-- The hazard backdrops, the launch-site pixel art, hazard quiz questions and hazard sounds were adapted during
-  the event from our earlier prototype branch (`Secondary-prototype`).
+- The hazard backdrops, launch-site pixel art, hazard quiz questions and hazard sounds were adapted from our
+  prototype branch (`Secondary-prototype`). Those parts of the prototype were themselves made during the event
+  (Nov 15), except a few small sound-making helper functions in `src/hazards/hazardSound.ts`, which date from
+  the Nov 12 prototype.
 
 ## Run it
 
