@@ -1,0 +1,79 @@
+{
+  "launch": {
+    "file": "/cutscenes/launch.mp4",
+    "poster": "/cutscenes/launch_poster.jpg",
+    "frames": 45,
+    "fps": 24,
+    "duration": 1.875,
+    "cues": [
+      {
+        "t": 0.08,
+        "type": "ignition",
+        "strength": 0.6
+      },
+      {
+        "t": 1.0,
+        "type": "rumble",
+        "strength": 0.8,
+        "until": 1.875
+      }
+    ],
+    "calmFile": "/cutscenes/calm/launch.mp4"
+  },
+  "cruising": {
+    "file": "/cutscenes/cruising.mp4",
+    "poster": "/cutscenes/cruising_poster.jpg",
+    "frames": 113,
+    "fps": 24,
+    "duration": 4.7083,
+    "cues": [
+      {
+        "t": 0.0,
+        "type": "rumble",
+        "strength": 0.6,
+        "until": 1.2
+      }
+    ],
+    "calmFile": "/cutscenes/calm/cruising.mp4"
+  },
+  "explosion": {
+    "file": "/cutscenes/explosion.mp4",
+    "poster": "/cutscenes/explosion_poster.jpg",
+    "frames": 132,
+    "fps": 24,
+    "duration": 5.5,
+    "cues": [
+      {
+        "t": 3.45,
+        "type": "warning",
+        "strength": 0.3
+      },
+      {
+        "t": 4.333,
+        "type": "spark",
+        "strength": 0.5
+      },
+      {
+        "t": 4.417,
+        "type": "explosion",
+        "strength": 1.0
+      }
+    ],
+    "calmFile": "/cutscenes/calm/explosion.mp4"
+  },
+  "planet": {
+    "file": "/cutscenes/planet.mp4",
+    "poster": "/cutscenes/planet_poster.jpg",
+    "frames": 29,
+    "fps": 24,
+    "duration": 1.2083,
+    "cues": [
+      {
+        "t": 0.55,
+        "type": "arrival_chime",
+        "strength": 0.2
+      }
+    ],
+    "calmFile": "/cutscenes/calm/planet.mp4"
+  }
+}
