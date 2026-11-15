@@ -527,6 +527,7 @@ export function Launch() {
               <PlanetVisual
                 planet={planet}
                 size={360}
+                spinSeconds={reduced ? undefined : 30}
                 decorative
                 className="h-auto w-[min(32vw,360px)]"
               />
@@ -570,7 +571,13 @@ export function Launch() {
           >
             <Starfield />
             <div className="absolute left-1/2 top-[44%] w-[230%] -translate-x-1/2">
-              <PlanetVisual planet={planet} size={1600} decorative className="h-auto w-full" />
+              <PlanetVisual
+                planet={planet}
+                size={1600}
+                spinSeconds={reduced ? undefined : 90}
+                decorative
+                className="h-auto w-full"
+              />
             </div>
             <motion.div
               className="absolute bottom-[30%] left-1/2 h-[38%] -translate-x-1/2"

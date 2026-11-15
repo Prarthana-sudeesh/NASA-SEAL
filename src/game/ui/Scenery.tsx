@@ -192,18 +192,14 @@ export function Hologram({ planet, size }: { planet: Planet; size: string }) {
         animate={{ scale: 1, opacity: 1, rotate: 0 }}
         transition={{ type: 'spring', stiffness: 80, damping: 14 }}
       >
-        <motion.div
-          className="h-full w-full"
-          animate={reduced ? undefined : { rotate: 360 }}
-          transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
-        >
-          <PlanetVisual
-            planet={planet}
-            size={1000}
-            className="h-full w-full opacity-90 [filter:drop-shadow(0_0_18px_#5ff3ff)_saturate(1.3)]"
-            decorative
-          />
-        </motion.div>
+        {/* The surface turns on its axis; the light and shadow stay put, like a real planet. */}
+        <PlanetVisual
+          planet={planet}
+          size={1000}
+          spinSeconds={reduced ? undefined : 24}
+          className="h-full w-full opacity-90 [filter:drop-shadow(0_0_18px_#5ff3ff)_saturate(1.3)]"
+          decorative
+        />
         {/* scanlines + orbit rings */}
         <div className="absolute inset-0 rounded-full bg-[repeating-linear-gradient(0deg,rgba(95,243,255,0.12)_0_2px,transparent_2px_5px)] mix-blend-screen" />
         <motion.div
@@ -211,7 +207,10 @@ export function Hologram({ planet, size }: { planet: Planet; size: string }) {
           style={{ rotateX: 70 }}
           animate={reduced ? undefined : { rotateZ: 360 }}
           transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
-        />
+        >
+          {/* a small moon riding the orbit ring */}
+          <span className="absolute left-1/2 top-0 h-[9%] w-[9%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_35%_35%,#ffffff,#9fdfff_45%,#2c5a78)] shadow-[0_0_12px_#5ff3ff]" />
+        </motion.div>
         <motion.div
           className="absolute inset-[-24%] rounded-full border border-dashed border-[#ffb35a]/40"
           style={{ rotateX: 74 }}

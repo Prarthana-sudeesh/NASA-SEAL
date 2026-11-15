@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import type { Planet } from '../data/types.ts';
 
 function hash(s: string): number {
@@ -22,10 +22,42 @@ interface Props {
   size?: number;
   className?: string;
   decorative?: boolean;
+  /** Seconds for one full turn of the surface. Omit (or 0) for a still planet. */
+  spinSeconds?: number;
 }
 
-/** Procedurally generated planet, tinted by equilibrium temperature. */
-export function PlanetVisual({ planet, size = 96, className = '', decorative = false }: Props) {
+/** Endless sideways scroll of one 100-unit-wide surface tile (drawn twice, so it wraps seamlessly). */
+function Spin({ seconds, children }: { seconds?: number; children: (dx: number) => ReactNode }) {
+  return (
+    <g>
+      {seconds ? (
+        <animateTransform
+          attributeName="transform"
+          type="translate"
+          from="0 0"
+          to="-100 0"
+          dur={`${seconds}s`}
+          repeatCount="indefinite"
+        />
+      ) : null}
+      {children(0)}
+      {children(100)}
+    </g>
+  );
+}
+
+/**
+ * Procedurally generated planet, tinted by equilibrium temperature. With `spinSeconds` the surface
+ * (bands, storms, lava, clouds) turns on the planet's axis while the lighting stays fixed, so it
+ * reads as a rotating world rather than a spinning disc.
+ */
+export function PlanetVisual({
+  planet,
+  size = 96,
+  className = '',
+  decorative = false,
+  spinSeconds,
+}: Props) {
   const uid = useId().replace(/:/g, '');
   const T = planet.eqTempK.value;
   const c = tempColor(T);
@@ -34,6 +66,20 @@ export function PlanetVisual({ planet, size = 96, className = '', decorative = f
   const bands = 3 + (h % 4);
   const tilt = (h % 40) - 20;
   const r = 40 + Math.min(8, planet.radiusEarth.value * 3);
+  // Surface features stay inside x 10–90 of each tile so the wrap point never shows a seam.
+  const spots = Array.from({ length: 3 + (h % 3) }, (_, i) => ({
+    x: 14 + ((h >>> (i * 5)) % 72),
+    y: 22 + ((h >>> (i * 3 + 1)) % 56),
+    rx: 4 + ((h >>> (i * 2)) % 4),
+    ry: 2 + ((h >>> (i * 4)) % 3),
+    light: i % 2 === 0,
+  }));
+  const clouds = Array.from({ length: 4 }, (_, i) => ({
+    x: 16 + ((h >>> (i * 6 + 2)) % 68),
+    y: 18 + i * 17 + ((h >>> i) % 8),
+    rx: 5 + ((h >>> (i * 3)) % 4),
+  }));
+  const hasClouds = atmo === 'thick' || atmo === 'earthlike';
   return (
     <svg
       width={size}
@@ -73,35 +119,74 @@ export function PlanetVisual({ planet, size = 96, className = '', decorative = f
       )}
       {atmo === 'scorching' && <circle cx="50" cy="50" r={r + 5} fill="#ff6a2a" opacity="0.18" />}
       <circle cx="50" cy="50" r={r} fill={`url(#g${uid})`} />
-      <g clipPath={`url(#c${uid})`} transform={`rotate(${tilt} 50 50)`}>
-        {Array.from({ length: bands }, (_, i) => (
-          <rect
-            key={i}
-            x="0"
-            y={14 + i * (72 / bands) + ((h >>> (i * 3)) % 6)}
-            width="100"
-            height={3 + ((h >>> (i * 2)) % 5)}
-            fill={i % 2 ? c.dark : c.light}
-            opacity="0.22"
-          />
-        ))}
+      <g clipPath={`url(#c${uid})`}>
+        <g transform={`rotate(${tilt} 50 50)`}>
+          <Spin seconds={spinSeconds}>
+            {(dx) => (
+              <g key={dx} transform={`translate(${dx} 0)`}>
+                {Array.from({ length: bands }, (_, i) => (
+                  <rect
+                    key={`b${i}`}
+                    x="0"
+                    y={14 + i * (72 / bands) + ((h >>> (i * 3)) % 6)}
+                    width="100"
+                    height={3 + ((h >>> (i * 2)) % 5)}
+                    fill={i % 2 ? c.dark : c.light}
+                    opacity="0.22"
+                  />
+                ))}
+                {spots.map((p, i) => (
+                  <ellipse
+                    key={`s${i}`}
+                    cx={p.x}
+                    cy={p.y}
+                    rx={p.rx}
+                    ry={p.ry}
+                    fill={p.light ? c.light : c.dark}
+                    opacity="0.35"
+                  />
+                ))}
+                {atmo === 'scorching' &&
+                  [0, 1, 2, 3].map((i) => (
+                    <circle
+                      key={`l${i}`}
+                      cx={25 + ((h >>> (i * 4)) % 50)}
+                      cy={25 + ((h >>> (i * 5)) % 50)}
+                      r={3 + (i % 3)}
+                      fill="#ffe08a"
+                      opacity="0.65"
+                    />
+                  ))}
+              </g>
+            )}
+          </Spin>
+          {hasClouds && (
+            // Clouds drift a little faster than the ground beneath them.
+            <Spin seconds={spinSeconds ? spinSeconds * 0.7 : undefined}>
+              {(dx) => (
+                <g key={dx} transform={`translate(${dx} 0)`}>
+                  {clouds.map((k, i) => (
+                    <ellipse
+                      key={i}
+                      cx={k.x}
+                      cy={k.y}
+                      rx={k.rx}
+                      ry="1.6"
+                      fill="#ffffff"
+                      opacity="0.4"
+                    />
+                  ))}
+                </g>
+              )}
+            </Spin>
+          )}
+        </g>
         {atmo === 'frozen' && (
           <>
             <ellipse cx="50" cy={50 - r + 6} rx={r * 0.7} ry="9" fill="#ffffff" opacity="0.8" />
             <ellipse cx="50" cy={50 + r - 6} rx={r * 0.6} ry="7" fill="#ffffff" opacity="0.7" />
           </>
         )}
-        {atmo === 'scorching' &&
-          [0, 1, 2, 3].map((i) => (
-            <circle
-              key={i}
-              cx={25 + ((h >>> (i * 4)) % 50)}
-              cy={25 + ((h >>> (i * 5)) % 50)}
-              r={3 + (i % 3)}
-              fill="#ffe08a"
-              opacity="0.65"
-            />
-          ))}
       </g>
       <circle cx="50" cy="50" r={r} fill={`url(#s${uid})`} />
     </svg>
