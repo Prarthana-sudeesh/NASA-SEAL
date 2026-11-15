@@ -20,7 +20,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # Always build the newest main, so re-running an older deploy can't bring back old code.
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: 22
