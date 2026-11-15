@@ -1,15 +1,12 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from './app/App.tsx';
 import './index.css';
-import { setupPwa } from './app/pwa.ts';
+import { App } from './App.tsx';
+import { installAudioUnlock } from './audio/audio.ts';
 
-setupPwa();
+installAudioUnlock();
 
-const root = document.getElementById('root');
-if (!root) throw new Error('Root element missing');
-
-createRoot(root).render(
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>,

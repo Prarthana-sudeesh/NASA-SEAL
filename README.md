@@ -1,35 +1,15 @@
-# Rocket Builder
+# STARBOUND: Exoplanet Rocket Lab
 
-**Team SEAL · NASA Space Apps Challenge entry**
+A browser game for the NASA Space Apps Challenge. You've just been promoted to aerospace engineer: pick a real
+exoplanet from NASA's catalogue, build a rocket that flies there **and comes home**, stay within budget, and
+launch. Hand-drawn cutscenes show what happens, then the game explains exactly why, with real numbers. A run is
+10 launches; the average goes on a shared leaderboard.
 
-An educational browser game. You play a newly appointed rocket scientist designing crewed rockets that
-fly to **real exoplanets and back**: Earth → planet → Earth. You choose a destination, study its real
-data, build a rocket by drag and drop within a budget, and launch it. Afterwards an engineering debrief
-explains which of your design decisions made the mission succeed or fail. Every mission goes on the
-leaderboard, labelled with its planet and difficulty, and ten missions make a campaign.
+Not an official NASA product. No NASA logos or insignia are used.
 
-The game covers five themes:
+## Run it
 
-- space exploration
-- rocket engineering and design
-- physics-based decisions (thrust-to-weight, fuel, gravity, temperature, pressure)
-- budget management
-- competition through leaderboards
-
-> This game is a NASA Space Apps Challenge entry and is not endorsed by NASA.
-
-## Play it
-
-- **On claude.ai (shared leaderboard):** open the team's hosted link. Scores from everyone it's shared with
-  appear on one online leaderboard.
-- **As an installable app:** open the GitHub Pages link
-  (https://prarthana-sudeesh.github.io/NASA-SEAL/ once Pages is enabled), then press **📲 Install**
-  (Chrome/Edge on computers and Android) or **Share → Add to Home Screen** (iPhone/iPad). The installed app
-  opens full-screen in landscape and works offline.
-
-## Quick start
-
-Requires **Node.js 22.18 or newer**.
+Needs Node 22.18 or newer.
 
 ```bash
 npm install
@@ -39,89 +19,61 @@ npm install
 npm run dev
 ```
 
-Then open the printed URL (usually http://localhost:5173). The game runs fully offline: planet data is
-bundled in `src/data/planets.json`.
+| Command | What it does |
+|---|---|
+| `npm run dev` | Dev server at http://localhost:5173 (add `?debug=1` for the demo panel) |
+| `npm run build` | Type-check and build a static site into `dist/` |
+| `npm test` | Vitest: mission engine, scoring, cutscene mapping, names, leaderboard, telemetry (51 tests) |
+| `npm run test:e2e` | Playwright: a full 10-launch run on each difficulty, ending on the leaderboard |
+| `npm run balance-check` | Tries every legal rocket on every planet; fails if any planet can't be won within budget |
+| `npm run fetch-planets` | Refreshes `src/data/planets.json` from the NASA Exoplanet Archive |
+| `npm run lint` | ESLint |
 
-| Command                 | What it does                                                         |
-| ----------------------- | -------------------------------------------------------------------- |
-| `npm run dev`           | Start the dev server                                                 |
-| `npm run build`         | Type-check and build for production into `dist/`                     |
-| `npm run preview`       | Serve the production build                                           |
-| `npm test`              | Run the Vitest suite (engine, data, builder, store, services)        |
-| `npm run typecheck`     | TypeScript in strict mode                                            |
-| `npm run lint`          | ESLint                                                               |
-| `npm run format`        | Prettier                                                             |
-| `npm run balance-check` | Exhaustive balance check over every planet and component combination |
-| `npm run fetch-planets` | Refresh planet data from the NASA Exoplanet Archive                  |
-| `npm run check`         | Type check, lint, tests and balance check together                   |
+Playwright uses the Chromium that ships with `@playwright/test`. On a fresh machine run
+`npx playwright install chromium` once.
 
-## How to play
+## Deploy
 
-1. **Crew login**: enter a username (shown on the leaderboard) and an email (stored only on your device).
-2. **Mission control**: Dr. Hart, the mission scientist, briefs you. Pick **Easy, Medium or Hard**, then a
-   planet. The wall screen shows its **Level, Description, Stats and Resources**. Real values are badged
-   **NASA DATA**; game assumptions are badged **GAME MODEL**.
-3. **Blueprint room**: drag parts from the toolbar onto the rocket (or press **+**):
-   payload (probe or crew capsule), communication antenna, fuel tank (rocket length), outer hull material
-   (aluminium, titanium, stainless steel, carbon-ceramic) and thruster. Add astronauts for a score multiplier.
-4. **Set the dials** using the planet data: fuel load, engine thrust and pressure seal. On Easy the dials
-   show their safe zones; on Medium the scientist gives tips; on Hard you're on your own.
-5. **Launch** from Earth City and follow the shared journey through space, with a live pressure meter, fuel
-   gauge, crew indicator and mission tracker. If something is wrong, the rocket fails at that stage.
-6. **Mission report**: score breakdown (mission, budget, each dial, part choice, astronauts) and a
-   debrief explaining exactly why the mission succeeded or failed.
-7. **Leaderboard**: every mission is posted straight away, labelled with its planet, difficulty and
-   whether it made the round trip. The board keeps your best score for each planet and difficulty
-   (best per difficulty on the shared online board). Ten missions make a campaign with its own summary.
+`npm run build` produces a fully static `dist/` with relative paths, so it works at any URL.
 
-### Extra fun
+- **Vercel**: import the repo; framework "Vite", build `npm run build`, output `dist`. Add the two Supabase
+  variables below under Project → Settings → Environment Variables.
+- **Netlify**: build `npm run build`, publish `dist`. Same variables under Site configuration → Environment.
+- **GitHub Pages**: `.github/workflows/deploy-pages.yml` builds `main` and publishes it (Settings → Pages →
+  Source: GitHub Actions). Add the variables as repository secrets and pass them to the build step if you want
+  the shared leaderboard there.
 
-- **Space hazards with NASA facts**: during the flight you may meet a black hole, an asteroid swarm, a
-  giant planet's gravity (use it as a slingshot!), space junk in Earth orbit, or a pretend alien saucer,
-  plus ship breakdowns. Each one asks a quick question; the right call earns +50 points and a "Did you
-  know?" fact with a link to the NASA page it came from. Harder levels bring more hazards (Easy 0–1,
-  Medium 1–2, Hard 2–3), harder questions and less time, and later missions add more.
-- **Fuel range**: the build screen shows how far your fuel will carry you on the trip to the planet and
-  back, and updates as you change parts and dials.
-- **Sound and music**: an original, epic voyage soundtrack plays in space, each hazard has its own sound,
-  and the crew's radio calls start with a NASA-style "Quindar" beep.
-- **Splashdown**: a safe return ends with the crew capsule parachuting into the ocean and a recovery boat.
-- **Team mode** (👥 in Mission control): 2–4 players share one device. Each player owns jobs (Flight
-  Engineer, Mission Scientist, Comms Officer, Safety & Budget Chief), and everyone must vote GO before
-  launch. Emergencies call on the player whose job it is.
-- **Fix my rocket** (🔧): a quick mini-game. Each rocket has one wrong part; find it before time runs out.
-  Five rockets per round, with bonus points for speed.
-- **Crew personalities**: Cmdr. Kai (calm), Rosa (a worrier) and Milo (the joker) chat during every flight
-  and react to what happens. Robot probes beep instead.
-- **Collection** (🏅): land on a planet to collect its postcard of real NASA facts, earn 11 badges, and fill
-  a photo album with every crew you bring home. Each player name has its own collection on the device.
-- **Animation slots**: five spots are reserved for the team's own animations. See
-  `src/game/animations/README.md`.
+## Shared leaderboard (Supabase)
 
-## Project structure
+Without configuration the leaderboard is stored in the browser and shows
+"Offline: scores saved on this device only". To share it between players:
 
-```
-src/
-  app/            App shell (screen switching) and error boundary
-  game/
-    config.ts     All tuning: parts, costs, budgets, planets per difficulty, scoring
-    engine.ts     Pure game rules: checks, dial zones, simulation, score, debrief text
-    screens/      Login, Mission (control room), Build (blueprint + dials), Launch, Result, Summary, Leaderboard
-    ui/           Pixel characters, scenery (control room, hologram, blueprint), rocket art, dial, HUD
-    sound.ts      Web Audio beeps and engine rumble (off by default)
-  components/     Badge, PlanetVisual, LiveRegion
-  data/           planets.json (NASA snapshot), planets.ts (typed loader + validation), types.ts
-  services/       leaderboard (interface, local storage, remote stub), name validation
-  store/          gameStore (player, campaign, build, dials), settingsStore, persistence
-scripts/          fetch-planets.ts, planet-descriptions.ts, balance-check.ts
-```
+1. Create a free project at supabase.com.
+2. Open SQL Editor → New query, paste [`supabase/schema.sql`](supabase/schema.sql) and run it. It creates the
+   `leaderboard` table, row-level security (public read; public insert only for names of 1–20 characters,
+   difficulty easy/medium/hard, exactly 10 attempts, average 0–1400; no update or delete), and adds the table
+   to realtime so boards refresh live.
+3. Project Settings → API: copy the Project URL and the `anon` public key into `.env.local`:
 
-## Tuning the game
+   ```bash
+   cp .env.example .env.local
+   ```
 
-Everything lives in `src/game/config.ts`: part costs, masses, fuel capacity, heat limits, hull strength,
-thrust, fuel economy, the fuel formula, budgets, which planets are in each difficulty, and scoring. After a
-change, run `npm run balance-check`. It fails if a planet can't be won within its budget, or if one rocket
-can win every Hard planet.
+   ```
+   VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+   VITE_SUPABASE_ANON_KEY=eyJ...
+   ```
+
+4. Restart `npm run dev` (or rebuild). The badge changes to "● Live leaderboard".
+
+The anon key is meant to be public; the table policies are what protect the data.
+
+**Honest limitation:** scores are computed in the browser, so a determined person could submit a fake score
+that passes the checks. That's acceptable for a hackathon. A stretch goal is a Supabase Edge Function that
+re-runs `src/engine` on the submitted designs and only then inserts the row.
+
+The Supabase leaderboard code is type-checked but was **not** tested against a live Supabase project during
+development (none was available). The local leaderboard is covered by unit and end-to-end tests.
 
 ## Refreshing planet data
 
@@ -129,91 +81,79 @@ can win every Hard planet.
 npm run fetch-planets
 ```
 
-This queries the [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/) TAP service
-(`pscomppars` table) and filters to planets with distance, radius, mass and equilibrium temperature, and a
-radius ≤ 2.5 Earth radii. It assigns the curated difficulty pools and rewrites `src/data/planets.json` with
-the retrieval date. Pool lists and planet descriptions live in `scripts/planet-descriptions.ts`. A planet
-added to a pool needs a description there.
+The script queries the NASA Exoplanet Archive TAP service (`pscomppars` table) for the 19 planets in
+`src/data/planetList.ts`. It matches names exactly first, then tolerantly (case, spaces, apostrophes), prints any
+planet it can't find (dropped, never invented), lists unmeasured columns, and writes `src/data/planets.json` with
+the retrieval date. The game never fetches at runtime; it ships the committed snapshot and works offline.
 
-Behind a corporate or sandbox proxy, Node's built-in `fetch` ignores `HTTPS_PROXY` unless you enable it
-(Node ≥ 22.21):
+Every number in the UI is labelled **NASA data**, **Calculated from NASA data**, or **Game assumption**.
 
-```bash
-NODE_USE_ENV_PROXY=1 npm run fetch-planets
-```
+## Assets
 
-No API key is needed: the archive's TAP service is open. If a future script needs a NASA API key, copy
-`.env.example` to `.env` and set `NASA_API_KEY` (it falls back to `DEMO_KEY`). `.env` is git-ignored.
+- `public/cutscenes/*.mp4`: four cutscenes **hand-drawn by our artist** at 24 fps, with finished sound design
+  and camera shake. The shaken 1080p clips were rendered from the artist's 4K masters with the same settings as
+  `exo-game-assets/tools/shake.py`.
+- `public/cutscenes/calm/*.mp4`: the same clips and sound without shake (Calm mode / reduced motion).
+- `public/cutscenes/cutscenes.json`: durations, frame counts and cue points (ignition, rumble, warning, spark,
+  explosion, arrival chime) that drive captions, haptics and HUD effects.
+- `public/sfx/*.wav`: UI sounds and a 24 s seamless music loop. All sound effects and the shake were **generated
+  procedurally** (no samples).
+- `exo-game-assets/tools/`: `synth.py` regenerates every sound; `shake.py` regenerates the shake and renders
+  the web and 4K clips. Re-run them to tweak. The 4K masters are source material and are not part of the build.
+- Planet pictures are drawn by the game from each planet's temperature, size and type, and are labelled
+  "Illustration generated by the game, not an image of the planet." CAPCOM Cass is an original SVG character.
 
-## Installable app (PWA)
+## The physics model (and its simplifications)
 
-The game is a Progressive Web App: `public/manifest.webmanifest` (name, icons, full-screen landscape),
-`public/sw.js` (offline cache) and `src/app/pwa.ts` (service worker registration and the install button).
-`.github/workflows/deploy-pages.yml` builds and publishes it to GitHub Pages on every push to `Prototype-2`
-or `main`. One-time setup: repository **Settings → Pages → Source: GitHub Actions**.
-To ship to app stores later, wrap the same build with a tool such as Capacitor.
+Full reasoning and the balance numbers are in [DECISIONS.md](DECISIONS.md). In short:
 
-## Leaderboard storage
+- **Rocket equation (Tsiolkovsky):** Δv = Isp × 9.81 × ln(m₀ ÷ m_f), applied tank by tank. Empty tanks are
+  dropped (like the Space Shuttle's external tank); the engine stays. With one tank it is exactly the textbook
+  formula.
+- **Lift-off:** thrust-to-weight = thrust ÷ (m₀ × 9.81) must be at least 1.2. The pad takes at most 600 t.
+- **Earth launch:** 9.4 km/s to orbit (a real figure including gravity and drag losses), checked with the
+  engine's climbing Isp.
+- **Refuelling (game assumption based on real NASA plans):** tanks are refilled in Earth orbit (Artemis lander
+  concept) and, on rocky worlds, on the surface from local resources (MOXIE made oxygen on Mars). So each leg
+  is checked against full tanks, using the vacuum Isp after Earth orbit.
+- **At the planet:** surface orbital speed v ≈ 7.9 × √(M ÷ R) km/s. Landing burn 0.1 × v (heat shield and
+  parachutes do the rest); take-off 1.2 × v (Earth's ratio, 9.4 ÷ 7.9). Orbit surveys: 5% of v each to enter and
+  leave a long, stretched orbit. Return correction 0.3 km/s. Every requirement gets a 10% margin.
+- **Planet type (gameplay rule):** radius ≤ 1.6 Earth radii → probably rocky → land; larger → probably
+  gas/ice-rich → orbit survey. 55 Cancri e is rocky but too massive to take off from with chemical rockets, so
+  it's an orbit survey.
+- **Deep-Space Drive (imaginary):** no real spacecraft can reach another star in a lifetime; Voyager 1 would
+  need tens of thousands of years for even the nearest. The drive's range must cover the distance twice.
+  Comms ranges in light-years are also imaginary (a real message would take years to arrive).
+- **Heat, comms, pressure, radiation:** shield ≥ planet equilibrium temperature and re-entry rated; comms range
+  ≥ distance; liquid tanks need a pressure system that suits the propellant and holds it all; crewed Flight
+  Director missions need radiation rating ≥ 2. Cadet simplifies these; Engineer adds comms and heat; Flight
+  Director checks everything.
+- **Score per launch:** mission 400, performance 200, budget 200, part suitability 100, resource balance 100,
+  then × (1 + 0.1 × crew) on success or × (1 − 0.15 × crew) on failure. Max 1,400. Run score = average of 10.
 
-Leaderboards sit behind the `LeaderboardService` interface (`src/services/leaderboard/`). The game picks
-the best one available at start-up:
+## Debug and demo tools
 
-- `SharedArtifactLeaderboardService`: used automatically when the game runs as a claude.ai artifact
-  published with the `db` and `user` capabilities. One row per player (`scores/<player>`), best average
-  per difficulty; everyone reads, each player writes only their own row.
+Add `?debug=1` to the URL (works in production builds too, only with the flag) to:
+play any of the seven outcome sequences on its own, force the next launch's cutscene, jump to any screen,
+fill a run with 10 random scores, and switch the leaderboard to offline mode.
 
-- `LocalLeaderboardService` is the default. It uses `localStorage`, works offline, and scores stay in that browser.
-- `RemoteLeaderboardService` is a stub, ready for Supabase, Firebase or any REST backend.
+## Accessibility
 
-To switch to a hosted leaderboard:
+Keyboard play throughout (including the workshop: every part has an "+ Add" button, and dnd-kit's keyboard
+sensor works), visible focus rings, an ARIA live region for part changes, countdown and outcomes, captions for
+every cutscene, Calm mode (no-shake clips, no parallax or wobble, fewer particles; follows
+`prefers-reduced-motion` by default), text size options, and haptics that can be turned off. Press **M** to mute
+and **Esc**/**Space** to skip the countdown or a cutscene.
 
-1. Create a `leaderboard` table/collection with
-   `id, name, difficulty, average, best, planets_visited, date`. Allow inserts and reads only (for
-   example with Supabase row-level security).
-2. Implement `list()` and `submit()` in `RemoteLeaderboardService.ts`. There is an example Supabase REST
-   call in the comments.
-3. Set Vite env vars, for example in `.env.local`:
-   ```
-   VITE_LEADERBOARD=remote
-   VITE_LEADERBOARD_URL=https://your-project.supabase.co
-   VITE_LEADERBOARD_KEY=your-public-anon-key
-   ```
-4. `getLeaderboardService()` in `index.ts` picks the remote service automatically when these are set.
+## Credits and sources
 
-## Scientific accuracy
-
-Actually travelling to an exoplanet is far beyond what any human spacecraft can do today. Even the closest
-one would take tens of thousands of years with current rockets. In Rocket Builder the **distances,
-sizes, masses and temperatures are real** (NASA DATA), but **travel physics are simplified** (GAME
-MODEL) so missions are playable:
-
-- Fuel needs grow with distance (log scale), gravity and rocket mass, using one simple formula rather than full orbital mechanics.
-- Atmospheres are estimated from size, gravity and temperature, because the archive has no atmosphere
-  data for most planets.
-- Outside pressure comes from the atmosphere class, which is estimated.
-
-Every value in the game is badged so players can tell real data from game assumptions. See
-`DECISIONS.md` for the full list of assumptions.
-
-## Data sources and credits
-
-Space-hazard quiz facts (retrieved November 2026):
-
-- Black holes: https://science.nasa.gov/universe/black-holes/ ,
-  https://science.nasa.gov/universe/black-holes/types/ ,
-  https://science.nasa.gov/universe/black-holes/anatomy/
-- Asteroids: https://science.nasa.gov/solar-system/asteroids/ and DART: https://science.nasa.gov/mission/dart/
-- Gravity assists: https://science.nasa.gov/learn/basics-of-space-flight/chapter4-1/
-- Space junk: https://orbitaldebris.jsc.nasa.gov/faq/
-- Search for life: https://science.nasa.gov/exoplanets/search-for-life/
-- Voyager Golden Record: https://science.nasa.gov/mission/voyager/golden-record-contents/
-
-Planet data and other credits:
-
-- **NASA Exoplanet Archive**, Planetary Systems Composite Parameters (`pscomppars`):
-  https://exoplanetarchive.ipac.caltech.edu/. The retrieval date is shown in the game footer.
-- **NASA Science, Strange New Worlds**, used for tone and inspiration:
-  https://science.nasa.gov/exoplanets/immersive/strange-new-worlds/
-- Planet descriptions, characters and all artwork are original to Team SEAL. No NASA logos or insignia are
-  used.
-- Built with React, Vite, TypeScript, Tailwind CSS, dnd-kit, Framer Motion and Zustand.
+- Planet data: [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/) (operated by NExScI/Caltech
+  for NASA), table `pscomppars`.
+- [NASA Exoplanet Catalog](https://science.nasa.gov/exoplanets/exoplanet-catalog/) and
+  [NASA Strange New Worlds](https://science.nasa.gov/exoplanets/immersive/strange-new-worlds/).
+- Planet facts: one NASA page per fact, listed with quotes in `src/data/planet-facts.ts`.
+- Physics references: NASA Glenn Research Center Beginner's Guide to Aeronautics (rocket equation, specific
+  impulse).
+- Cutscenes: hand-drawn by our artist. Sound and shake: procedurally generated (`exo-game-assets/tools/`).
+- Fonts: Fredoka, Nunito and Space Mono (Google Fonts).

@@ -1,77 +1,60 @@
-// Balance check: every planet × every part combination.
-// Run with: npm run balance-check   (exits non-zero if a rule fails)
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { DIFFICULTIES, SLOT_ORDER, partsOf, type Difficulty } from '../src/game/config.ts';
-import { bestDials, buildCost, simulate, type Build } from '../src/game/engine.ts';
-import type { Planet, PlanetSnapshot } from '../src/data/types.ts';
+// Exhaustive balance check: every legal rocket on every planet at its own difficulty.
+// Prints whether each mission can be won within budget, the cheapest winning cost, and the best score.
+// Run with: npm run balance-check   (exits 1 if any planet is unwinnable within its budget)
+import { COMMS, DRIVES, ENGINES, PODS, PRESSURE, SHIELDS, TANKS } from '../src/data/components.ts';
+import { PLANETS } from '../src/data/planets.ts';
+import { DIFFICULTIES } from '../src/engine/difficulty.ts';
+import { evaluateMission, launchBlockers, requirements } from '../src/engine/mission.ts';
+import type { Design } from '../src/engine/rocket.ts';
 
-const here = dirname(fileURLToPath(import.meta.url));
-const snapshot = JSON.parse(
-  readFileSync(resolve(here, '../src/data/planets.json'), 'utf8'),
-) as PlanetSnapshot;
-const byId = new Map(snapshot.planets.map((p) => [p.id, p]));
-
-function allBuilds(): Build[] {
-  let builds: Build[] = [
-    { payload: null, antenna: null, body: null, hull: null, engine: null, crew: 0 },
-  ];
-  for (const kind of SLOT_ORDER) {
-    builds = builds.flatMap((b) => partsOf(kind).map((p) => ({ ...b, [kind]: p.id })));
+let bad = 0;
+for (const planet of PLANETS) {
+  const diff = planet.tier;
+  const budget = DIFFICULTIES[diff].budget;
+  let wins = 0;
+  let winsInBudget = 0;
+  let cheapest = Infinity;
+  let best = { total: 0, desc: '' };
+  let total = 0;
+  for (const engine of ENGINES) {
+    const tanks = TANKS.filter((t) => t.propellant === engine.propellant);
+    const opt = [null, ...tanks];
+    for (const t0 of tanks)
+      for (const t1 of opt)
+        for (const t2 of opt) {
+          if (!t1 && t2) continue;
+          for (const pod of PODS)
+            for (const drive of DRIVES)
+              for (const comms of COMMS)
+                for (const pressure of [null, ...PRESSURE])
+                  for (const shield of [null, ...SHIELDS])
+                    for (let crew = 0; crew <= pod.seats; crew++) {
+                      const design: Design = {
+                        pod: pod.id, engine: engine.id, drive: drive.id, comms: comms.id,
+                        tank0: t0.id, tank1: t1?.id ?? null, tank2: t2?.id ?? null,
+                        pressure: pressure?.id ?? null, shield: shield?.id ?? null,
+                      };
+                      if (launchBlockers(design, diff, crew).length) continue;
+                      total++;
+                      const r = evaluateMission(design, planet, diff, crew);
+                      if (!r.success) continue;
+                      wins++;
+                      if (r.stats.cost <= budget) winsInBudget++;
+                      cheapest = Math.min(cheapest, r.stats.cost);
+                      if (r.score.total > best.total)
+                        best = {
+                          total: r.score.total,
+                          desc: `${engine.name} + ${[t0, t1, t2].filter(Boolean).map((t) => t!.name).join('/')} · ${pod.name} ×${crew} · $${r.stats.cost}M · Δv ${r.stats.dvKms.toFixed(1)}/${r.req.earthLegKms.toFixed(1)} vac ${r.stats.dvVacKms.toFixed(1)}/${r.req.deepNeededKms.toFixed(1)}`,
+                        };
+                    }
+        }
   }
-  return builds;
+  const req = requirements(planet);
+  const ok = winsInBudget > 0;
+  if (!ok) bad++;
+  console.log(
+    `${ok ? '✓' : '✗'} [${DIFFICULTIES[diff].label.padEnd(15)}] ${planet.officialName.padEnd(18)} ${planet.missionType.padEnd(5)} deep ${req.deepNeededKms.toFixed(1).padStart(4)} km/s` +
+      ` | wins ${String(winsInBudget).padStart(6)}/${String(total).padStart(6)} in budget (${wins} any) | cheapest $${cheapest}M of $${budget}M | best ${best.total}\n      ${best.desc}`,
+  );
 }
-
-const describe = (b: Build) =>
-  SLOT_ORDER.map((k) => b[k]?.split('-').slice(1).join('-')).join(' + ');
-let failures = 0;
-const builds = allBuilds();
-
-for (const d of ['easy', 'medium', 'hard'] as Difficulty[]) {
-  const cfg = DIFFICULTIES[d];
-  console.log(`\n=== ${cfg.label} (budget ${cfg.budget}, ${builds.length} builds) ===`);
-  const winsByBuild = new Map<Build, number>();
-  for (const id of cfg.planets) {
-    const planet = byId.get(id) as Planet | undefined;
-    if (!planet) {
-      failures++;
-      console.log(`  ✗ planet ${id} missing from planets.json`);
-      continue;
-    }
-    let cheapest: { cost: number; build: Build; score: number } | null = null;
-    let wins = 0;
-    let bestScore = 0;
-    for (const b of builds) {
-      const dials = bestDials(b, planet);
-      if (!dials) continue;
-      const cost = buildCost(b);
-      if (cost > cfg.budget * 1.15) continue;
-      wins++;
-      winsByBuild.set(b, (winsByBuild.get(b) ?? 0) + 1);
-      const score = simulate(b, dials, planet, d).total;
-      bestScore = Math.max(bestScore, score);
-      if (cost <= cfg.budget && (!cheapest || cost < cheapest.cost))
-        cheapest = { cost, build: b, score };
-    }
-    console.log(
-      `  ${planet.name.padEnd(20)} ${String(Math.round(planet.eqTempK.value)).padStart(4)} K  ${planet.surfaceGravityG.value.toFixed(2)} g  ` +
-        `${String(planet.distanceLy.value).padStart(6)} ly  wins ${String(wins).padStart(3)}  cheapest ${cheapest?.cost ?? 'n/a'}  best score ${bestScore}`,
-    );
-    if (cheapest) console.log(`      ${describe(cheapest.build)}`);
-    else {
-      failures++;
-      console.log(`  ✗ ${planet.name}: no winning build within budget`);
-    }
-  }
-  if (d === 'hard') {
-    const universal = [...winsByBuild.values()].filter((n) => n === cfg.planets.length).length;
-    if (universal) {
-      failures++;
-      console.log(`  ✗ ${universal} build(s) win every Hard planet`);
-    } else console.log('  ✓ No single rocket wins every Hard planet');
-  }
-}
-
-console.log(failures ? `\n${failures} balance rule(s) failed.` : '\nAll balance rules pass.');
-process.exit(failures ? 1 : 0);
+process.exit(bad ? 1 : 0);

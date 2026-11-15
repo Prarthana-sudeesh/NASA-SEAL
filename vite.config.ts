@@ -4,16 +4,19 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  // Relative paths so the same build works on GitHub Pages, any sub-folder, and claude.ai.
+  // Relative paths so the same build works on Vercel, Netlify, GitHub Pages or any sub-folder.
   base: './',
   plugins: [react(), tailwindcss()],
   build: {
     rollupOptions: {
       output: {
-        // Split large libraries into their own cacheable chunks.
-        manualChunks: {
-          motion: ['framer-motion'],
-          dnd: ['@dnd-kit/core'],
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (/[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'react';
+          if (id.includes('@dnd-kit')) return 'dnd';
+          if (id.includes('motion') || id.includes('framer')) return 'motion';
+          if (id.includes('howler')) return 'audio';
+          return undefined;
         },
       },
     },
@@ -23,5 +26,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 });

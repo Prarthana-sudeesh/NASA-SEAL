@@ -1,136 +1,86 @@
-import { LocalLeaderboardService } from './leaderboard/LocalLeaderboardService.ts';
-import { validateName } from './nameValidation.ts';
-import { SharedArtifactLeaderboardService } from './leaderboard/SharedArtifactLeaderboardService.ts';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { cleanName, displayName, escapeHtml, isProfane } from './names.ts';
+import { LocalLeaderboardService, validateEntry } from './leaderboard.ts';
+import { telemetry, cassHint } from '../engine/telemetry.ts';
+import { getPlanet } from '../data/planets.ts';
+import { suggestedBuild } from '../engine/suggest.ts';
+import { requirements } from '../engine/mission.ts';
+import { getPart } from '../data/components.ts';
+import { PLANET_FACTS } from '../data/planet-facts.ts';
+import { PLANETS } from '../data/planets.ts';
 
-describe('name validation', () => {
-  it('enforces 2–16 characters', () => {
-    expect(validateName('A').ok).toBe(false);
-    expect(validateName('  Ace  ').value).toBe('Ace');
-    expect(validateName('Ace').ok).toBe(true);
-    expect(validateName('x'.repeat(17)).ok).toBe(false);
-    expect(validateName('x'.repeat(16)).ok).toBe(true);
+describe('engineer names', () => {
+  it('trims, limits to 20 characters and rejects empty names', () => {
+    expect(cleanName('  Ada   Lovelace ').value).toBe('Ada Lovelace');
+    expect(cleanName('   ').ok).toBe(false);
+    expect(cleanName('x'.repeat(21)).ok).toBe(false);
+    expect(cleanName('x'.repeat(20)).ok).toBe(true);
   });
-  it('filters profanity including simple leetspeak', () => {
-    expect(validateName('sh1tpilot').ok).toBe(false);
-    expect(validateName('Captain Nova').ok).toBe(true);
-    expect(validateName('<script>').ok).toBe(false);
+  it('filters profanity, including simple leetspeak, without blocking real names', () => {
+    expect(isProfane('sh1t head')).toBe(true);
+    expect(cleanName('fuckface').ok).toBe(false);
+    expect(isProfane('Dickens')).toBe(false);
+    expect(isProfane('Scunthorpe')).toBe(false);
+    expect(displayName('b1tch')).toBe('Space Cadet');
+    expect(displayName('Rocket Riley')).toBe('Rocket Riley');
   });
-});
-
-describe('LocalLeaderboardService', () => {
-  const entry = (name: string, average: number, difficulty: 'easy' | 'hard' = 'easy') => ({
-    name,
-    average,
-    best: average + 50,
-    difficulty,
-    planetsVisited: ['Proxima Cen b'],
-    date: '2026-11-12T00:00:00Z',
-  });
-
-  it('stores entries per difficulty, sorted by average', async () => {
-    const svc = new LocalLeaderboardService('test-lb');
-    await svc.submit(entry('Low', 100));
-    await svc.submit(entry('High', 900));
-    await svc.submit(entry('Hardy', 500, 'hard'));
-    const easy = await svc.list('easy');
-    expect(easy.map((e) => e.name)).toEqual(['High', 'Low']);
-    expect((await svc.list('hard')).map((e) => e.name)).toEqual(['Hardy']);
-  });
-
-  it('keeps one best score per player, planet and difficulty, with labels', async () => {
-    const svc = new LocalLeaderboardService('test-lb3');
-    const mission = (name: string, score: number, planet: string, success = true) => ({
-      name,
-      average: score,
-      best: score,
-      difficulty: 'easy' as const,
-      planetsVisited: [planet],
-      planet,
-      success,
-      date: '2026-11-15T00:00:00Z',
-    });
-    await svc.submit(mission('Ace', 600, 'Proxima Cen b'));
-    await svc.submit(mission('ace', 900, 'Proxima Cen b')); // better: replaces
-    await svc.submit(mission('Ace', 300, 'Proxima Cen b', false)); // worse: ignored
-    await svc.submit(mission('Ace', 500, 'Ross 128 b')); // other planet: kept
-    const rows = await svc.list('easy');
-    expect(rows.map((e) => [e.average, e.planet, e.success])).toEqual([
-      [900, 'Proxima Cen b', true],
-      [500, 'Ross 128 b', true],
-    ]);
-  });
-
-  it('caps at the top N and survives corrupt storage', async () => {
-    const svc = new LocalLeaderboardService('test-lb2');
-    for (let i = 0; i < 25; i++) await svc.submit(entry(`P${i}`, i));
-    expect((await svc.list('easy')).length).toBe(20);
-    localStorage.setItem('test-lb2', '{not json');
-    expect(await svc.list('easy')).toEqual([]);
+  it('rejects angle brackets and escapes HTML', () => {
+    expect(cleanName('<script>').ok).toBe(false);
+    expect(escapeHtml(`<b>"Tom" & 'Jerry'</b>`)).toBe('&lt;b&gt;&quot;Tom&quot; &amp; &#39;Jerry&#39;&lt;/b&gt;');
   });
 });
 
-describe('SharedArtifactLeaderboardService', () => {
-  // In-memory stand-in for the claude.ai shared database.
-  function fakeDb() {
-    const docs = new Map<string, Record<string, unknown>>();
-    const snap = (id: string) => ({ id, exists: docs.has(id), data: () => docs.get(id) });
-    return {
-      docs,
-      collection: () => ({
-        doc: (id: string) => ({
-          get: async () => snap(id),
-          set: async (d: Record<string, unknown>) => void docs.set(id, d),
-        }),
-        get: async () => ({ docs: [...docs.keys()].map(snap) }),
-      }),
-    };
-  }
-  const run = (average: number, difficulty: 'easy' | 'hard' = 'easy') => ({
-    name: 'Ace',
-    difficulty,
-    average,
-    best: average + 10,
-    planetsVisited: ['Proxima Cen b'],
-    date: '2026-11-12T00:00:00Z',
+describe('leaderboard (local)', () => {
+  beforeEach(() => localStorage.clear());
+  it('validates entries like the database policy', () => {
+    expect(validateEntry({ name: 'Ada', difficulty: 'easy', avg_score: 500, attempts: 10 })).toBeNull();
+    expect(validateEntry({ name: 'Ada', difficulty: 'easy', avg_score: 500, attempts: 9 })).toMatch(/10/);
+    expect(validateEntry({ name: 'Ada', difficulty: 'easy', avg_score: 1400.1, attempts: 10 })).toMatch(/range/);
+    expect(validateEntry({ name: 'Ada', difficulty: 'nightmare' as never, avg_score: 1, attempts: 10 })).toMatch(/difficulty/);
   });
-
-  it('keeps each player’s best average per difficulty and shares it with everyone', async () => {
-    const db = fakeDb();
-    const me = new SharedArtifactLeaderboardService(db, { id: async () => 'u1' });
-    const friend = new SharedArtifactLeaderboardService(db, { id: async () => 'u2' });
-    await me.submit(run(700));
-    await me.submit(run(500)); // worse: ignored
-    await me.submit(run(900, 'hard'));
-    await friend.submit({ ...run(800), name: 'Bo' });
-    const easy = await friend.list('easy');
-    expect(easy.map((e) => [e.name, e.average])).toEqual([
-      ['Bo', 800],
-      ['Ace', 700],
-    ]);
-    expect((await me.list('hard'))[0]).toMatchObject({ id: 'u1:hard', average: 900 });
-    await me.submit({ ...run(950), planet: 'Ross 128 b', success: true });
-    expect((await friend.list('easy'))[0]).toMatchObject({
-      name: 'Ace',
-      average: 950,
-      planet: 'Ross 128 b',
-      success: true,
-    });
+  it('stores, sorts and filters by difficulty', async () => {
+    const svc = new LocalLeaderboardService();
+    await svc.submit({ name: 'Low', difficulty: 'easy', avg_score: 100.04, attempts: 10 });
+    await svc.submit({ name: 'High', difficulty: 'easy', avg_score: 900, attempts: 10 });
+    await svc.submit({ name: 'Hard one', difficulty: 'hard', avg_score: 500, attempts: 10 });
+    expect((await svc.list('all')).map((e) => e.name)).toEqual(['High', 'Hard one', 'Low']);
+    expect((await svc.list('hard')).map((e) => e.name)).toEqual(['Hard one']);
+    expect((await svc.list('easy'))[1].avg_score).toBe(100);
+    await expect(svc.submit({ name: '', difficulty: 'easy', avg_score: 1, attempts: 10 })).rejects.toThrow();
   });
+});
 
-  it('explains when posting is not allowed', async () => {
-    const db = fakeDb();
-    const blocked = {
-      collection: () => ({
-        ...db.collection(),
-        doc: () => ({
-          get: async () => ({ id: 'x', exists: false, data: () => undefined }),
-          set: async () => Promise.reject(new Error('x')),
-        }),
-      }),
-    };
-    const svc = new SharedArtifactLeaderboardService(blocked, { id: async () => 'u1' });
-    await expect(svc.submit(run(1))).rejects.toThrow(/can interact/);
-    const anon = new SharedArtifactLeaderboardService(db, { id: async () => null });
-    await expect(anon.submit(run(1))).rejects.toThrow(/Sign in/);
+describe('workshop telemetry', () => {
+  const planet = getPlanet('proxima-cen-b')!;
+  it('starts empty and tells you to drag parts', () => {
+    const s = telemetry({}, planet, 'easy', 0);
+    expect(cassHint(s).text).toMatch(/Drag parts/);
+  });
+  it('flags a rocket that is too heavy to lift off', () => {
+    const s = telemetry({ pod: 'pod-quad', engine: 'eng-hydro2', tank0: 'tank-hydro', tank1: 'tank-hydro', tank2: 'tank-hydro', drive: 'drv-hop', comms: 'com-whisper' }, planet, 'easy', 0);
+    expect(s.find((x) => x.id === 'twr')!.level).toBe('bad');
+    expect(cassHint(s).text).toMatch(/Too heavy to lift off/);
+  });
+  it('marks simplified checks as automatic at Cadet level', () => {
+    const s = telemetry({ comms: 'com-whisper' }, planet, 'easy', 0);
+    expect(s.find((x) => x.id === 'comms')!.level).toBe('auto');
+    expect(s.find((x) => x.id === 'heat')!.level).toBe('auto');
+  });
+  it('suggested build fills exactly 3 slots with a drive that covers the round trip', () => {
+    const d = suggestedBuild(planet);
+    expect(Object.keys(d)).toHaveLength(3);
+    const drive = getPart(d.drive) as { rangeLy: number };
+    expect(drive.rangeLy).toBeGreaterThanOrEqual(requirements(planet).driveRangeLy);
+  });
+});
+
+describe('planet facts', () => {
+  it('every shown fact has a NASA source', () => {
+    for (const p of PLANETS) {
+      const f = PLANET_FACTS[p.id];
+      expect(f, p.id).toBeDefined();
+      if (f.fact) expect(f.source, p.id).toMatch(/^https:\/\/([a-z0-9-]+\.)*(nasa\.gov|caltech\.edu)\//);
+      else expect(f.removed, p.id).toBeTruthy();
+    }
   });
 });
