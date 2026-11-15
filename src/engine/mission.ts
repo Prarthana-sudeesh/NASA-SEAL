@@ -155,9 +155,8 @@ const fint = (n: number) => Math.round(n).toLocaleString('en-US');
 const tonnes = (kg: number) => `${fint(kg / 1000)} t`;
 
 export const SCIENCE = {
-  rocketEquation: { label: 'NASA Glenn: the ideal rocket equation', url: 'https://www.grc.nasa.gov/www/k-12/rocket/rktpow.html' },
-  thrustWeight: { label: 'NASA Glenn: thrust-to-weight ratio', url: 'https://www.grc.nasa.gov/www/k-12/rocket/fwrat.html' },
-  isp: { label: 'NASA Glenn: specific impulse', url: 'https://www.grc.nasa.gov/www/k-12/rocket/specimp.html' },
+  rocketEquation: { label: 'NASA Glenn: the ideal rocket equation', url: 'https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/ideal-rocket-equation/' },
+  isp: { label: 'NASA Glenn: specific impulse', url: 'https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/specific-impulse/' },
   interstellar: { label: 'NASA: Voyager, our farthest spacecraft', url: 'https://science.nasa.gov/mission/voyager/' },
   dsn: { label: 'NASA Deep Space Network', url: 'https://www.nasa.gov/communicating-with-missions/dsn/' },
   heatShield: { label: 'NASA: heat shields', url: 'https://www.nasa.gov/humans-in-space/orion-spacecraft/' },
@@ -190,7 +189,7 @@ export function evaluateMission(design: Design, planet: Planet, difficulty: Diff
     advice: twrOk
       ? `Your engine pushed ${s.twr.toFixed(2)}× the rocket’s weight, enough to climb away from the pad.`
       : `Your engine pushed only ${s.twr.toFixed(2)}× the rocket’s weight but needed ${A.minTwr.toFixed(2)}×. Pick a stronger engine or carry fewer or smaller tanks.`,
-    scienceLink: SCIENCE.thrustWeight,
+    scienceLink: SCIENCE.isp,
   });
   const liquid = p.engine && p.engine.propellant !== 'solid';
   const prsSuits = !liquid
