@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useGame } from '../store/game.ts';
+import { useGame, LAUNCHES_PER_RUN } from '../store/game.ts';
 import { CassSays } from '../ui/Cass.tsx';
 import { Button } from '../ui/Button.tsx';
 import { cleanName } from '../services/names.ts';
@@ -9,7 +9,7 @@ const LINES = [
   'Congratulations, engineer! You’ve just been promoted to aerospace engineer at NASA. 🎉',
   'Your job: pick a real planet from NASA’s exoplanet catalogue and design a rocket that flies there AND comes home.',
   'Every part costs money, so stay inside your budget. Heavier rockets need stronger engines.',
-  'Each run is 10 launches. Your average score goes on the leaderboard, so every launch counts!',
+  `Each run is ${LAUNCHES_PER_RUN} launches. Your average score goes on the leaderboard, so every launch counts!`,
   'First things first: what should Mission Control call you?',
 ];
 

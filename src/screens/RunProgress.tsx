@@ -37,7 +37,7 @@ export function RunProgress() {
           </p>
         </Card>
       </div>
-      <ol className="mb-8 grid grid-cols-5 gap-2 md:grid-cols-10" aria-label="Launches">
+      <ol className="mb-8 grid grid-cols-3 gap-2" aria-label="Launches">
         {Array.from({ length: LAUNCHES_PER_RUN }, (_, i) => {
           const a = attempts[i];
           return (

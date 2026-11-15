@@ -1,4 +1,4 @@
-import { useGame } from '../store/game.ts';
+import { useGame, LAUNCHES_PER_RUN } from '../store/game.ts';
 import { startMusic, unlockAudio } from '../audio/audio.ts';
 import { Button } from '../ui/Button.tsx';
 import { CassFace } from '../ui/Cass.tsx';
@@ -68,7 +68,7 @@ export function Title() {
               go('progress');
             }}
           >
-            Resume run ({DIFFICULTIES[difficulty].label}, {attempts.length}/10)
+            Resume run ({DIFFICULTIES[difficulty].label}, {attempts.length}/{LAUNCHES_PER_RUN})
           </Button>
         )}
         <Button size="lg" variant="magenta" onClick={() => open('leaderboard')}>

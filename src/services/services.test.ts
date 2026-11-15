@@ -33,20 +33,20 @@ describe('engineer names', () => {
 describe('leaderboard (local)', () => {
   beforeEach(() => localStorage.clear());
   it('validates entries like the database policy', () => {
-    expect(validateEntry({ name: 'Ada', difficulty: 'easy', avg_score: 500, attempts: 10 })).toBeNull();
-    expect(validateEntry({ name: 'Ada', difficulty: 'easy', avg_score: 500, attempts: 9 })).toMatch(/10/);
-    expect(validateEntry({ name: 'Ada', difficulty: 'easy', avg_score: 1400.1, attempts: 10 })).toMatch(/range/);
-    expect(validateEntry({ name: 'Ada', difficulty: 'nightmare' as never, avg_score: 1, attempts: 10 })).toMatch(/difficulty/);
+    expect(validateEntry({ name: 'Ada', difficulty: 'easy', avg_score: 500, attempts: 3 })).toBeNull();
+    expect(validateEntry({ name: 'Ada', difficulty: 'easy', avg_score: 500, attempts: 2 })).toMatch(/3/);
+    expect(validateEntry({ name: 'Ada', difficulty: 'easy', avg_score: 1400.1, attempts: 3 })).toMatch(/range/);
+    expect(validateEntry({ name: 'Ada', difficulty: 'nightmare' as never, avg_score: 1, attempts: 3 })).toMatch(/difficulty/);
   });
   it('stores, sorts and filters by difficulty', async () => {
     const svc = new LocalLeaderboardService();
-    await svc.submit({ name: 'Low', difficulty: 'easy', avg_score: 100.04, attempts: 10 });
-    await svc.submit({ name: 'High', difficulty: 'easy', avg_score: 900, attempts: 10 });
-    await svc.submit({ name: 'Hard one', difficulty: 'hard', avg_score: 500, attempts: 10 });
+    await svc.submit({ name: 'Low', difficulty: 'easy', avg_score: 100.04, attempts: 3 });
+    await svc.submit({ name: 'High', difficulty: 'easy', avg_score: 900, attempts: 3 });
+    await svc.submit({ name: 'Hard one', difficulty: 'hard', avg_score: 500, attempts: 3 });
     expect((await svc.list('all')).map((e) => e.name)).toEqual(['High', 'Hard one', 'Low']);
     expect((await svc.list('hard')).map((e) => e.name)).toEqual(['Hard one']);
     expect((await svc.list('easy'))[1].avg_score).toBe(100);
-    await expect(svc.submit({ name: '', difficulty: 'easy', avg_score: 1, attempts: 10 })).rejects.toThrow();
+    await expect(svc.submit({ name: '', difficulty: 'easy', avg_score: 1, attempts: 3 })).rejects.toThrow();
   });
 });
 

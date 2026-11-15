@@ -5,7 +5,7 @@
 A browser game for the NASA Space Apps Challenge. You've just been promoted to aerospace engineer: pick a real
 exoplanet from NASA's catalogue, build a rocket that flies there **and comes home**, stay within budget, and
 launch. Hand-drawn cutscenes show what happens, then the game explains exactly why, with real numbers. A run is
-10 launches; the average goes on a shared leaderboard.
+3 launches; the average goes on a shared leaderboard.
 
 Not an official NASA product. No NASA logos or insignia are used.
 
@@ -26,7 +26,7 @@ npm run dev
 | `npm run dev` | Dev server at http://localhost:5173 (add `?debug=1` for the demo panel) |
 | `npm run build` | Type-check and build a static site into `dist/` |
 | `npm test` | Vitest: mission engine, scoring, cutscene mapping, names, leaderboard, telemetry (51 tests) |
-| `npm run test:e2e` | Playwright: a full 10-launch run on each difficulty, ending on the leaderboard |
+| `npm run test:e2e` | Playwright: a full 3-launch run on each difficulty, ending on the leaderboard |
 | `npm run balance-check` | Tries every legal rocket on every planet; fails if any planet can't be won within budget |
 | `npm run build-cutscenes` | Re-renders the seven cutscene sequence videos from the artist's clips (needs ffmpeg) |
 | `npm run fetch-planets` | Refreshes `src/data/planets.json` from the NASA Exoplanet Archive |

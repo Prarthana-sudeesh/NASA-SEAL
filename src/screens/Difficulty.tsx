@@ -1,4 +1,4 @@
-import { useGame } from '../store/game.ts';
+import { useGame, LAUNCHES_PER_RUN } from '../store/game.ts';
 import { DIFFICULTIES } from '../engine/difficulty.ts';
 import { PLANETS } from '../data/planets.ts';
 import type { Difficulty } from '../data/types.ts';
@@ -15,7 +15,7 @@ export function DifficultyScreen() {
   const { chooseDifficulty, go, difficulty, attempts, engineerName } = useGame();
   const pick = (d: Difficulty) => {
     if (difficulty && difficulty !== d && attempts.length > 0 && attempts.length < 10) {
-      if (!window.confirm(`Switching difficulty starts a new run. Your current ${DIFFICULTIES[difficulty].label} run (${attempts.length}/10) will be lost. Continue?`)) return;
+      if (!window.confirm(`Switching difficulty starts a new run. Your current ${DIFFICULTIES[difficulty].label} run (${attempts.length}/${LAUNCHES_PER_RUN}) will be lost. Continue?`)) return;
     }
     chooseDifficulty(d);
     go('destinations');
@@ -23,7 +23,7 @@ export function DifficultyScreen() {
   return (
     <div>
       <ScreenTitle kicker="Step 1 of 3" title="Choose your difficulty">
-        Each run is 10 launches on one difficulty. Your average score goes on the leaderboard.
+        Each run is {LAUNCHES_PER_RUN} launches on one difficulty. Your average score goes on the leaderboard.
       </ScreenTitle>
       <CassSays className="mb-8 max-w-3xl" text={`Pick your challenge, ${engineerName || 'engineer'}. Cadet is a great place to learn the ropes!`} />
       <div className="grid gap-8 lg:grid-cols-3">

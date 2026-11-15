@@ -20,7 +20,7 @@ async function buildGoodRocket(page: Page) {
   await page.getByTestId('add-com-whisper').click();
 }
 
-test('a full 10-launch Cadet run ends on the leaderboard', async ({ page }) => {
+test('a full 3-launch Cadet run ends on the leaderboard', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
 
@@ -49,8 +49,8 @@ test('a full 10-launch Cadet run ends on the leaderboard', async ({ page }) => {
   await buildGoodRocket(page);
   await expect(page.getByTestId('stat-dv_deep')).toHaveAttribute('data-level', /good|warn/);
 
-  for (let n = 1; n <= 10; n++) {
-    if (n === 10) {
+  for (let n = 1; n <= 3; n++) {
+    if (n === 3) {
       // Last launch: deliberately underpowered (one tank) to exercise a failure path.
       await page.getByTestId('remove-tank2').click();
       await page.getByTestId('remove-tank1').click();
@@ -69,9 +69,9 @@ test('a full 10-launch Cadet run ends on the leaderboard', async ({ page }) => {
       await expect(page.getByRole('button', { name: /Skip ⏭/ })).toBeVisible({ timeout: 5000 });
       await page.keyboard.press('Escape'); // skip cutscene
     }
-    await expect(page.getByTestId('stamp')).toHaveText(n === 10 ? 'MISSION LOST' : 'MISSION SUCCESS');
+    await expect(page.getByTestId('stamp')).toHaveText(n === 3 ? 'MISSION LOST' : 'MISSION SUCCESS');
     await page.getByTestId('next').click();
-    if (n < 10) {
+    if (n < 3) {
       await expect(page.getByTestId('run-average')).toBeVisible();
       await page.getByTestId('next-launch').click();
     }
@@ -90,7 +90,7 @@ for (const [diff, planet] of [
   ['medium', 'k2-18-b'],
   ['hard', 'hd-189733-b'],
 ] as const) {
-  test(`a full 10-launch ${diff} run completes and posts`, async ({ page }) => {
+  test(`a full 3-launch ${diff} run completes and posts`, async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('/');
@@ -114,7 +114,7 @@ for (const [diff, planet] of [
     await page.getByTestId('add-prs-helium').click();
     await page.getByTestId('tab-shield').click();
     await page.getByTestId('add-shd-cork').click();
-    for (let n = 1; n <= 10; n++) {
+    for (let n = 1; n <= 3; n++) {
       await page.getByTestId('to-prelaunch').click();
       await page.getByTestId('launch').click();
       await expect(page.getByTestId('countdown')).toBeVisible();
@@ -123,7 +123,7 @@ for (const [diff, planet] of [
       await page.keyboard.press('Escape');
       await expect(page.getByTestId('stamp')).toHaveText('MISSION SUCCESS');
       await page.getByTestId('next').click();
-      if (n < 10) await page.getByTestId('next-launch').click();
+      if (n < 3) await page.getByTestId('next-launch').click();
     }
     await page.getByTestId('submit-score').click();
     await expect(page.getByTestId('lb-rows')).toContainText(`Tester ${diff}`);

@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useGame } from '../store/game.ts';
+import { useGame, LAUNCHES_PER_RUN } from '../store/game.ts';
 import { useCalm } from '../store/settings.ts';
 import { getPlanet } from '../data/planets.ts';
 import { evaluateMission, PHASES } from '../engine/mission.ts';
@@ -225,7 +225,7 @@ export function Launch() {
             </LaunchPad>
             <div className="absolute inset-x-0 top-[6vh] z-10 text-center">
               <p className="mb-2 font-display text-2xl text-cyan [text-shadow:3px_3px_0_#05070F]">
-                {planet.nickname} · launch {last.n}/10
+                {planet.nickname} · launch {last.n}/{LAUNCHES_PER_RUN}
               </p>
               <motion.p
                 key={count}

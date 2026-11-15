@@ -29,7 +29,7 @@ create policy "public insert checked" on public.leaderboard
   with check (
     char_length(name) between 1 and 20
     and difficulty in ('easy', 'medium', 'hard')
-    and attempts = 10
+    and attempts = 3
     and avg_score between 0 and 1400
   );
 

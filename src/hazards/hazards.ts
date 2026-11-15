@@ -3,6 +3,10 @@
 // The alien spaceship is the one made-up hazard, and the game says so.
 // Ported from the Secondary-prototype branch (src/game/events.ts), plus the quasar.
 import type { Difficulty } from '../data/types.ts';
+import { LAUNCHES_PER_RUN } from '../store/game.ts';
+
+/** 0 on the first launch of a run, 1 on the last. */
+const progress = (launch: number) => Math.max(0, Math.min(1, (launch - 1) / Math.max(1, LAUNCHES_PER_RUN - 1)));
 
 export type HazardId = 'blackhole' | 'gravity' | 'aliens' | 'asteroids' | 'debris' | 'flare' | 'quasar';
 export type HazardSceneKind = HazardId | 'alarm';
@@ -535,14 +539,14 @@ export const HAZARD_CONFIG: Record<Difficulty, HazardConfig> = {
 /** How hard the mini-games play: grows with difficulty and with every launch in the run. */
 export function intensity(d: Difficulty, launch: number): number {
   const base = { easy: 1, medium: 1.4, hard: 1.85 }[d];
-  return base * (1 + Math.max(0, Math.min(10, launch) - 1) * 0.06);
+  return base * (1 + progress(launch) * 0.5);
 }
 
 /** Seconds on the clock: a little less with every launch in the run. */
 export function secondsFor(d: Difficulty, mode: Mode, launch: number): number {
   const c = HAZARD_CONFIG[d];
   const s = mode === 'quiz' ? c.quizSeconds : c.gameSeconds;
-  return mode === 'quiz' ? Math.max(8, Math.round(s - (launch - 1) * 0.6)) : s;
+  return mode === 'quiz' ? Math.max(8, Math.round(s - progress(launch) * 5)) : s;
 }
 
 /** One hazard planned for one flight. */
@@ -564,7 +568,7 @@ export interface HazardResult {
 
 /** How many hazards a flight gets: harder levels and later launches bring more. */
 export function hazardCount(d: Difficulty, launch: number, r: () => number): number {
-  const late = launch >= 6 ? 0.3 : 0;
+  const late = progress(launch) >= 0.5 ? 0.3 : 0;
   if (d === 'easy') return 1 + (r() < late ? 1 : 0);
   if (d === 'medium') return 1 + (r() < 0.4 + late ? 1 : 0);
   return 2 + (r() < 0.35 + late ? 1 : 0);
