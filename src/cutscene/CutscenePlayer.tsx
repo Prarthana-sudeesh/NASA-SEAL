@@ -3,7 +3,7 @@ import type { CutscenePlan, Outcome } from '../engine/cutscenes.ts';
 import { duckMusic, haptic, play as playSfx } from '../audio/audio.ts';
 import { useSettings } from '../store/settings.ts';
 import { HAPTICS, type Cue } from './captions.ts';
-import { SEQUENCES, phaseOf, sequencePoster, sequenceSrc, videoHost } from './sequences.ts';
+import { SEQUENCES, claimVideo, phaseOf, sequencePoster, sequenceSrc, videoHost } from './sequences.ts';
 import { TvStatic } from './TvStatic.tsx';
 
 export interface CutscenePlayerProps {
@@ -120,6 +120,7 @@ export function CutscenePlayer({ plan, calm, playing, onCue, onPhase, onEnd, onS
       finish();
     };
     v.addEventListener('ended', onEnded);
+    claimVideo();
     v.currentTime = 0;
     v.muted = useSettings.getState().muted;
     v.play().catch(() => {

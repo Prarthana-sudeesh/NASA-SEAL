@@ -42,6 +42,7 @@ export function phaseOf(e: TimelineEntry): number {
 // Safari only allows a video to play with sound if play() was first called during a tap.
 // The LAUNCH tap "primes" this element; the launch screen then plays it 10 s later with sound.
 let host: HTMLVideoElement | null = null;
+let primeId = 0;
 
 export function videoHost(): HTMLVideoElement {
   if (!host) {
@@ -66,8 +67,16 @@ export function primeSequence(o: Outcome, calm: boolean) {
   }
   v.muted = false;
   v.currentTime = 0;
+  const id = ++primeId;
   const p = v.play();
-  if (p) p.then(() => { v.pause(); v.currentTime = 0; }, () => { /* will retry muted later */ });
+  // play() can resolve late on a slow connection. Only undo the priming if the cutscene hasn't
+  // taken over the element in the meantime, or we'd pause the real playback.
+  if (p) p.then(() => { if (id === primeId) { v.pause(); v.currentTime = 0; } }, () => { /* will retry muted later */ });
+}
+
+/** The cutscene player calls this before playing, so a pending prime can't pause it. */
+export function claimVideo() {
+  primeId++;
 }
 
 /** Warm the cache (pre-launch screen): fetch the likely sequence file. */
