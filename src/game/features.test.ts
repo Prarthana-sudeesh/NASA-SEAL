@@ -3,7 +3,7 @@ import { getPlanet, PLANETS } from '../data/planets.ts';
 import { EMPTY_COLLECTION, postcardFacts, recordFlight, recordPuzzle } from './collection.ts';
 import { crewLine } from './crew.ts';
 import { checks, simulate, type Build } from './engine.ts';
-import { EVENTS, EVENT_IDS, pickEvent } from './events.ts';
+import { EVENT_SECONDS, HAZARDS, HAZARD_IDS, planHazards, questionOf } from './events.ts';
 import { makePuzzle, puzzlePoints, seededRandom } from './puzzles.ts';
 import { holder, rolesOf, ROLE_ORDER } from './team.ts';
 import { resetGameStore, useGame } from '../store/gameStore.ts';
@@ -18,48 +18,91 @@ const GOOD: Build = {
 };
 const DIALS = { fuel: 72, thrust: 66, pressure: 1 };
 
-describe('surprise emergencies', () => {
-  it('every event has three options and a valid answer', () => {
-    for (const id of EVENT_IDS) {
-      const e = EVENTS[id];
-      expect(e.options).toHaveLength(3);
-      expect(e.answer).toBeGreaterThanOrEqual(0);
-      expect(e.answer).toBeLessThan(3);
+describe('space hazards', () => {
+  it('every question is well formed, and NASA facts carry a NASA source', () => {
+    for (const id of HAZARD_IDS) {
+      const h = HAZARDS[id];
+      expect(h.questions.length).toBeGreaterThan(0);
+      expect(h.questions.some((q) => q.level === 1)).toBe(true);
+      for (const q of h.questions) {
+        expect(q.options.length).toBeGreaterThanOrEqual(3);
+        expect(q.answer).toBeGreaterThanOrEqual(0);
+        expect(q.answer).toBeLessThan(q.options.length);
+        expect(new Set(q.options).size).toBe(q.options.length);
+        if (q.source) expect(q.source.url).toMatch(/^https:\/\/[a-z.]*nasa\.gov\//);
+      }
     }
+    for (const id of ['blackhole', 'asteroids', 'gravity', 'aliens', 'debris'] as const)
+      expect(HAZARDS[id].questions.every((q) => q.source)).toBe(true);
   });
 
-  it('picks the same event for the same flight, and sometimes none', () => {
-    expect(pickEvent('run:1')).toBe(pickEvent('run:1'));
-    const picks = Array.from({ length: 200 }, (_, i) => pickEvent(`r${i}:3`));
-    expect(picks.some((p) => p === null)).toBe(true);
-    expect(new Set(picks.filter(Boolean)).size).toBe(EVENT_IDS.length);
+  it('plans the same hazards for the same flight', () => {
+    const all = ['journey', 'approach', 'return'] as const;
+    expect(planHazards('run:1', 'hard', 1, [...all])).toEqual(
+      planHazards('run:1', 'hard', 1, [...all]),
+    );
   });
 
-  it('adds emergency points only when there was an emergency', () => {
+  it('gets harder with the level: more hazards and harder questions', () => {
+    const all = ['journey', 'approach', 'return'] as const;
+    const avg = (d: 'easy' | 'medium' | 'hard') => {
+      let n = 0;
+      let lvl = 0;
+      for (let i = 0; i < 300; i++) {
+        const evs = planHazards(`s${i}`, d, 1 + (i % 10), [...all]);
+        n += evs.length;
+        lvl += evs.reduce((s, e) => s + questionOf(e).level, 0);
+      }
+      return { count: n / 300, level: lvl / Math.max(1, n) };
+    };
+    const e = avg('easy');
+    const m = avg('medium');
+    const h = avg('hard');
+    expect(e.count).toBeLessThan(m.count);
+    expect(m.count).toBeLessThan(h.count);
+    expect(e.level).toBe(1);
+    expect(h.level).toBeGreaterThan(m.level);
+    expect(EVENT_SECONDS.hard).toBeLessThan(EVENT_SECONDS.easy);
+  });
+
+  it('only uses stages the rocket reaches, one hazard per stage, no repeats', () => {
+    for (let i = 0; i < 200; i++) {
+      const evs = planHazards(`x${i}`, 'hard', 8, ['journey', 'approach']);
+      expect(evs.every((e) => e.stage === 'journey' || e.stage === 'approach')).toBe(true);
+      expect(new Set(evs.map((e) => e.stage)).size).toBe(evs.length);
+      expect(new Set(evs.map((e) => e.id)).size).toBe(evs.length);
+      for (const e of evs) {
+        expect(HAZARDS[e.id].stages).toContain(e.stage);
+        expect([...e.order].sort()).toEqual(questionOf(e).options.map((_, k) => k));
+      }
+    }
+    expect(planHazards('none', 'hard', 1, [])).toEqual([]);
+  });
+
+  it('adds hazard points only when there were hazards', () => {
     const planet = getPlanet('proxima-cen-b')!;
     const none = simulate(GOOD, DIALS, planet, 'easy', null, null);
-    const good = simulate(GOOD, DIALS, planet, 'easy', null, true);
-    const bad = simulate(GOOD, DIALS, planet, 'easy', null, false);
-    expect(none.breakdown.some((b) => b.label === 'Emergency call')).toBe(false);
+    const good = simulate(GOOD, DIALS, planet, 'easy', null, { handled: 2, total: 2 });
+    const bad = simulate(GOOD, DIALS, planet, 'easy', null, { handled: 0, total: 2 });
+    expect(none.breakdown.some((b) => b.label.startsWith('Space hazard'))).toBe(false);
     expect(good.total).toBeGreaterThan(bad.total);
     expect(bad.total).toBe(none.total);
   });
 
-  it('resolving an emergency rescores the flight', () => {
+  it('answering hazards rescores the flight', () => {
     resetGameStore();
     const s = useGame.getState();
     s.signIn({ username: 'Ace', email: 'ace@x.org' });
     s.choosePlanet('proxima-cen-b');
     s.setBuild(GOOD);
     s.setDials(DIALS);
-    // Launch until a flight has an emergency.
-    let a = useGame.getState().launch();
-    for (let i = 0; i < 9 && !a?.event; i++) a = useGame.getState().launch();
-    expect(a?.event).toBeDefined();
-    const before = a!.result.total;
-    useGame.getState().resolveEvent(EVENTS[a!.event!.id].answer);
+    let a = useGame.getState().launch()!;
+    for (let i = 0; i < 9 && !a.events; i++) a = useGame.getState().launch()!;
+    expect(a.events!.length).toBeGreaterThanOrEqual(1);
+    const before = a.result.total;
+    a.events!.forEach((e, i) => useGame.getState().resolveEvent(i, questionOf(e).answer));
     const after = useGame.getState().run!.attempts.at(-1)!;
-    expect(after.event!.resolved).toBe(true);
+    expect(after.events!.every((e) => e.resolved)).toBe(true);
     expect(after.result.total).toBeGreaterThan(before);
   });
 });
@@ -126,7 +169,7 @@ describe('collection', () => {
     crew: 1,
     result: simulate(GOOD, success ? DIALS : { ...DIALS, fuel: 5 }, planet, 'easy'),
     quizCorrect: true,
-    emergencyHandled: true,
+    hazards: [{ id: 'blackhole', handled: true }],
     teamSize: 2,
   });
 
@@ -134,7 +177,9 @@ describe('collection', () => {
     const out = recordFlight(EMPTY_COLLECTION, flight('a:1'))!;
     expect(out.unlocks.postcard).toBe('proxima-cen-b');
     expect(out.unlocks.photo).toBe(true);
-    expect(out.unlocks.badges).toEqual(expect.arrayContaining(['first-flight', 'team-player']));
+    expect(out.unlocks.badges).toEqual(
+      expect.arrayContaining(['first-flight', 'team-player', 'black-hole-survivor']),
+    );
     expect(recordFlight(out.next, flight('a:1'))).toBeNull();
     const again = recordFlight(out.next, flight('a:2'))!;
     expect(again.unlocks.postcard).toBeNull();

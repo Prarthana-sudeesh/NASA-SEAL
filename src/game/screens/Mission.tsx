@@ -146,7 +146,7 @@ export function Mission() {
 
   return (
     <Stage>
-      <CommandCenter>
+      <CommandCenter theme={difficulty}>
         <Hologram planet={planet} size="24%" />
         <AnimationSlot id="mission-intro" />
         <Readout

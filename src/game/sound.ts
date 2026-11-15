@@ -312,6 +312,30 @@ const EFFECTS = {
   /** Confetti pops. */
   pop: () =>
     burst({ type: 'bandpass', freq: 1500 + Math.random() * 2000, dur: 0.06, vol: 0.18, q: 4 }),
+  /** NASA-style Quindar tone: a short beep that opens a radio call. */
+  quindar: () => tone({ type: 'sine', freq: 2525, dur: 0.25, vol: 0.07, attack: 0.005 }),
+  quindarOut: () => tone({ type: 'sine', freq: 2475, dur: 0.25, vol: 0.07, attack: 0.005 }),
+  blackhole: () => {
+    tone({ type: 'sine', freq: 140, to: 28, dur: 2.6, vol: 0.4, attack: 0.3 });
+    burst({ type: 'lowpass', freq: 1800, to: 80, dur: 2.4, vol: 0.3, attack: 0.4, brownian: true });
+  },
+  asteroid: () => {
+    burst({ type: 'lowpass', freq: 260, dur: 0.35, vol: 0.45, brownian: true });
+    burst({ type: 'highpass', freq: 2600, dur: 0.06, vol: 0.12, at: 0.02 });
+  },
+  slingshot: () => {
+    tone({ type: 'triangle', freq: 90, to: 420, dur: 1.4, vol: 0.18, attack: 0.2 });
+    burst({ type: 'bandpass', freq: 200, to: 2400, dur: 1.4, vol: 0.12, q: 3 });
+  },
+  alien: () => {
+    tone({ type: 'sine', freq: 520, to: 1040, dur: 0.35, vol: 0.12 });
+    tone({ type: 'sine', freq: 1040, to: 390, dur: 0.5, vol: 0.12, at: 0.35 });
+    tone({ type: 'square', freq: 1560, dur: 0.06, vol: 0.04, at: 0.9 });
+  },
+  junk: () => {
+    burst({ type: 'bandpass', freq: 600, to: 4000, dur: 0.35, vol: 0.18, q: 4 });
+    tone({ type: 'square', freq: 2000, dur: 0.04, vol: 0.04, at: 0.1 });
+  },
 } as const;
 
 export type SfxName = keyof typeof EFFECTS;
@@ -344,15 +368,11 @@ const SPARKLE = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51];
 const CHORD_SECONDS = 8;
 
 /** Starts the looping space soundtrack (no-op if already playing or sound is off). */
-export function startMusic() {
-  musicWanted = true;
-  if (!enabled || musicStop) return;
-  const a = audio();
-  if (!a || !musicBus) return;
+function calmMusic(a: AudioContext, bus: GainNode): () => void {
   const out = a.createGain();
   out.gain.setValueAtTime(0.0001, a.currentTime);
   out.gain.exponentialRampToValueAtTime(1, a.currentTime + 3);
-  out.connect(musicBus);
+  out.connect(bus);
 
   // Echo for the sparkles.
   const delay = a.createDelay(2);
@@ -451,7 +471,7 @@ export function startMusic() {
     if (Math.random() < 0.55) sparkle();
   }, 900);
 
-  musicStop = () => {
+  return () => {
     window.clearInterval(chordTimer);
     window.clearInterval(sparkleTimer);
     const t = a.currentTime;
@@ -468,6 +488,335 @@ export function startMusic() {
       }
       out.disconnect();
     }, 1400);
+  };
+}
+
+export type MusicMode = 'calm' | 'travel';
+let musicMode: MusicMode = 'calm';
+
+/** Starts the looping soundtrack for the current mode (no-op if already playing or sound is off). */
+export function startMusic() {
+  musicWanted = true;
+  if (!enabled || musicStop) return;
+  const a = audio();
+  if (!a || !musicBus) return;
+  musicStop = musicMode === 'travel' ? travelMusic(a, musicBus) : calmMusic(a, musicBus);
+}
+
+/** Switch between the calm mission-control music and the epic voyage music. */
+export function setMusicMode(mode: MusicMode) {
+  if (mode === musicMode) return;
+  musicMode = mode;
+  if (musicStop) {
+    musicStop();
+    musicStop = null;
+  }
+  if (enabled && musicWanted) startMusic();
+}
+
+// ---------- voyage music ----------
+
+// An original, slow and epic voyage theme: organ-like chords that swell and fade, a soft
+// ticking-clock pulse and a twinkling arpeggio. Chords: Am – F – C – G – Am – Em – F – G.
+const VOYAGE = [
+  [55, 110, 164.81, 220, 261.63, 329.63],
+  [43.65, 87.31, 174.61, 220, 261.63, 349.23],
+  [65.41, 130.81, 196, 261.63, 329.63, 392],
+  [49, 98, 196, 246.94, 293.66, 392],
+  [55, 110, 164.81, 220, 261.63, 329.63],
+  [41.2, 82.41, 164.81, 246.94, 329.63, 392],
+  [43.65, 87.31, 174.61, 220, 261.63, 349.23],
+  [49, 98, 196, 246.94, 293.66, 392],
+];
+const BEAT = 0.6;
+const BEATS_PER_CHORD = 8;
+const ORGAN_PARTIALS: [number, number][] = [
+  [1, 1],
+  [2, 0.5],
+  [3, 0.28],
+  [4, 0.16],
+  [6, 0.07],
+];
+
+function reverbImpulse(a: AudioContext, seconds: number): AudioBuffer {
+  const len = Math.floor(a.sampleRate * seconds);
+  const buf = a.createBuffer(2, len, a.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
+  }
+  return buf;
+}
+
+function travelMusic(a: AudioContext, bus: GainNode): () => void {
+  const out = a.createGain();
+  out.gain.setValueAtTime(0.0001, a.currentTime);
+  out.gain.exponentialRampToValueAtTime(1, a.currentTime + 2.5);
+  out.connect(bus);
+
+  const verb = a.createConvolver();
+  verb.buffer = reverbImpulse(a, 4);
+  const verbGain = a.createGain();
+  verbGain.gain.value = 0.55;
+  verb.connect(verbGain).connect(out);
+
+  const organBus = a.createGain();
+  organBus.gain.value = 1;
+  const warm = a.createBiquadFilter();
+  warm.type = 'lowpass';
+  warm.frequency.value = 2400;
+  organBus.connect(warm);
+  warm.connect(out);
+  warm.connect(verb);
+
+  const bell = a.createGain();
+  bell.gain.value = 1;
+  bell.connect(out);
+  bell.connect(verb);
+
+  let beat = 0;
+  let chordIdx = 0;
+  const chordSeconds = BEAT * BEATS_PER_CHORD;
+
+  const playChord = (t0: number) => {
+    const notes = VOYAGE[chordIdx % VOYAGE.length];
+    // The music builds through each 8-chord cycle, then breathes out again.
+    const swell = 0.55 + 0.45 * Math.sin(((chordIdx % VOYAGE.length) / VOYAGE.length) * Math.PI);
+    for (const f of notes) {
+      for (const [mult, amp] of ORGAN_PARTIALS) {
+        const freq = f * mult;
+        if (freq > 3000) continue;
+        const o = a.createOscillator();
+        o.type = 'sine';
+        o.frequency.value = freq;
+        const g = a.createGain();
+        const peak = 0.018 * amp * swell * (f < 70 ? 1.6 : 1);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(peak, t0 + 1.6);
+        g.gain.setValueAtTime(peak, t0 + chordSeconds - 0.4);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + chordSeconds + 1.8);
+        o.connect(g).connect(organBus);
+        o.start(t0);
+        o.stop(t0 + chordSeconds + 1.9);
+      }
+    }
+    // A deep boom at the start of each cycle.
+    if (chordIdx % VOYAGE.length === 0) {
+      const o = a.createOscillator();
+      o.frequency.setValueAtTime(70, t0);
+      o.frequency.exponentialRampToValueAtTime(38, t0 + 2.5);
+      const g = a.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 3);
+      o.connect(g).connect(out);
+      o.start(t0);
+      o.stop(t0 + 3.1);
+    }
+  };
+
+  const tick = (t0: number, accent: boolean) => {
+    const src = a.createBufferSource();
+    src.buffer = noise(a);
+    const f = a.createBiquadFilter();
+    f.type = 'highpass';
+    f.frequency.value = accent ? 3500 : 5500;
+    const g = a.createGain();
+    g.gain.setValueAtTime(accent ? 0.07 : 0.035, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.04);
+    src.connect(f).connect(g).connect(out);
+    src.start(t0);
+    src.stop(t0 + 0.06);
+  };
+
+  // Twinkling arpeggio over the top two chord tones (an original pattern).
+  const ARP = [3, 5, 4, 5, 3, 5, 4, 2];
+  const arp = (t0: number, step: number) => {
+    const notes = VOYAGE[chordIdx % VOYAGE.length];
+    const f = notes[ARP[step % ARP.length]] * 2;
+    const o = a.createOscillator();
+    o.type = 'triangle';
+    o.frequency.value = f;
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.03, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.9);
+    o.connect(g).connect(bell);
+    o.start(t0);
+    o.stop(t0 + 1);
+  };
+
+  const step = () => {
+    const t0 = a.currentTime + 0.05;
+    if (beat % BEATS_PER_CHORD === 0) {
+      playChord(t0);
+    }
+    tick(t0, beat % 4 === 0);
+    // The arpeggio joins after the first chord and plays on half-beats.
+    if (beat >= BEATS_PER_CHORD) {
+      arp(t0, beat * 2);
+      arp(t0 + BEAT / 2, beat * 2 + 1);
+    }
+    beat++;
+    if (beat % BEATS_PER_CHORD === 0) chordIdx++;
+  };
+  step();
+  const timer = window.setInterval(step, BEAT * 1000);
+
+  return () => {
+    window.clearInterval(timer);
+    const t = a.currentTime;
+    out.gain.cancelScheduledValues(t);
+    out.gain.setValueAtTime(Math.max(out.gain.value, 0.0001), t);
+    out.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
+    window.setTimeout(() => out.disconnect(), 1800);
+  };
+}
+
+// ---------- hazard sound loops ----------
+
+export type HazardSound = 'blackhole' | 'asteroids' | 'gravity' | 'aliens' | 'debris' | 'alarm';
+
+/** Starts a looping sound for a flight hazard; returns a stop function. */
+export function hazardLoop(kind: HazardSound): () => void {
+  const a = audio();
+  if (!a || !enabled || !sfxBus) return () => {};
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, a.currentTime);
+  g.gain.exponentialRampToValueAtTime(1, a.currentTime + 0.6);
+  g.connect(sfxBus);
+  const nodes: AudioScheduledSourceNode[] = [];
+  const timers: number[] = [];
+  const every = (ms: () => number, fn: () => void) => {
+    const run = () => {
+      fn();
+      timers.push(window.setTimeout(run, ms()));
+    };
+    timers.push(window.setTimeout(run, ms()));
+  };
+  const osc = (type: OscillatorType, freq: number, vol: number) => {
+    const o = a.createOscillator();
+    o.type = type;
+    o.frequency.value = freq;
+    const og = a.createGain();
+    og.gain.value = vol;
+    o.connect(og).connect(g);
+    o.start();
+    nodes.push(o);
+    return o;
+  };
+  const lfo = (target: AudioParam, rate: number, depth: number) => {
+    const l = a.createOscillator();
+    l.frequency.value = rate;
+    const lg = a.createGain();
+    lg.gain.value = depth;
+    l.connect(lg).connect(target);
+    l.start();
+    nodes.push(l);
+  };
+
+  switch (kind) {
+    case 'blackhole': {
+      const src = a.createBufferSource();
+      src.buffer = brown(a);
+      src.loop = true;
+      const f = a.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 160;
+      const ng = a.createGain();
+      ng.gain.value = 0.35;
+      src.connect(f).connect(ng).connect(g);
+      src.start();
+      nodes.push(src);
+      const sub = osc('sine', 36, 0.3);
+      lfo(sub.frequency, 0.25, 6);
+      every(
+        () => 2600,
+        () => tone({ type: 'sine', freq: 95, to: 30, dur: 1.6, vol: 0.25, attack: 0.2 }),
+      );
+      break;
+    }
+    case 'asteroids':
+      every(
+        () => 350 + Math.random() * 700,
+        () => {
+          burst({
+            type: 'lowpass',
+            freq: 180 + Math.random() * 200,
+            dur: 0.3,
+            vol: 0.35,
+            brownian: true,
+          });
+          if (Math.random() < 0.4) burst({ type: 'highpass', freq: 2400, dur: 0.05, vol: 0.1 });
+        },
+      );
+      break;
+    case 'gravity': {
+      const o = osc('triangle', 70, 0.12);
+      lfo(o.frequency, 0.4, 25);
+      every(
+        () => 2200,
+        () => burst({ type: 'bandpass', freq: 200, to: 1800, dur: 1.6, vol: 0.08, q: 3 }),
+      );
+      break;
+    }
+    case 'aliens': {
+      const o = osc('sine', 660, 0.08);
+      lfo(o.frequency, 6, 14);
+      const notes = [523, 659, 784, 698, 880, 587];
+      every(
+        () => 450,
+        () =>
+          o.frequency.setTargetAtTime(
+            notes[Math.floor(Math.random() * notes.length)],
+            a.currentTime,
+            0.12,
+          ),
+      );
+      every(
+        () => 900 + Math.random() * 600,
+        () => tone({ type: 'square', freq: 1400 + Math.random() * 900, dur: 0.05, vol: 0.03 }),
+      );
+      break;
+    }
+    case 'debris':
+      every(
+        () => 300 + Math.random() * 500,
+        () =>
+          Math.random() < 0.5
+            ? burst({ type: 'bandpass', freq: 500, to: 3500, dur: 0.3, vol: 0.15, q: 4 })
+            : tone({ type: 'square', freq: 1700 + Math.random() * 600, dur: 0.05, vol: 0.035 }),
+      );
+      break;
+    case 'alarm': {
+      let hi = false;
+      every(
+        () => 450,
+        () => {
+          hi = !hi;
+          tone({ type: 'square', freq: hi ? 880 : 660, dur: 0.4, vol: 0.04 });
+        },
+      );
+      break;
+    }
+  }
+
+  return () => {
+    timers.forEach((t) => window.clearTimeout(t));
+    const t = a.currentTime;
+    g.gain.cancelScheduledValues(t);
+    g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    window.setTimeout(() => {
+      for (const n of nodes) {
+        try {
+          n.stop();
+        } catch {
+          /* already stopped */
+        }
+      }
+      g.disconnect();
+    }, 700);
   };
 }
 

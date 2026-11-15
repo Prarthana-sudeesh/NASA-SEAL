@@ -44,6 +44,7 @@ import {
 } from '../engine.ts';
 import { Dial } from '../ui/Dial.tsx';
 import { QuizPanel } from '../ui/QuizPanel.tsx';
+import { FuelRange } from '../ui/FuelRange.tsx';
 import { DIAL_ROLE, ROLES, SLOT_ROLE, rolesOf, whoDecides } from '../team.ts';
 import { BigButton, TopMenu } from '../ui/Hud.tsx';
 import { Astronaut, Scientist, SpeechBubble } from '../ui/Pixel.tsx';
@@ -336,6 +337,12 @@ export function Build() {
               </dd>
             </dl>
           </section>
+
+          {p && (
+            <div className="absolute left-[1.5%] top-[40%] z-10 w-[21%]">
+              <FuelRange build={build} dials={dials} planet={planet} />
+            </div>
+          )}
 
           <RocketDrop build={build} highlight={step === 'parts' ? tool : null} flash={flash} />
 

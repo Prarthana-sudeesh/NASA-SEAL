@@ -74,9 +74,16 @@ bundled in `src/data/planets.json`.
 
 ### Extra fun
 
-- **Surprise emergencies**: on most flights something goes wrong mid-journey (solar flare, micrometeoroid
-  hit, lost signal, computer glitch, drifting off course, power drop). Pick the right fix before the timer
-  runs out for +50 points, and learn why it's the fix real crews use.
+- **Space hazards with NASA facts**: during the flight you may meet a black hole, an asteroid swarm, a
+  giant planet's gravity (use it as a slingshot!), space junk in Earth orbit, or a pretend alien saucer,
+  plus ship breakdowns. Each one asks a quick question; the right call earns +50 points and a "Did you
+  know?" fact with a link to the NASA page it came from. Harder levels bring more hazards (Easy 0–1,
+  Medium 1–2, Hard 2–3), harder questions and less time, and later missions add more.
+- **Fuel range**: the build screen shows how far your fuel will carry you on the trip to the planet and
+  back, and updates as you change parts and dials.
+- **Sound and music**: an original, epic voyage soundtrack plays in space, each hazard has its own sound,
+  and the crew's radio calls start with a NASA-style "Quindar" beep.
+- **Splashdown**: a safe return ends with the crew capsule parachuting into the ocean and a recovery boat.
 - **Team mode** (👥 in Mission control): 2–4 players share one device. Each player owns jobs (Flight
   Engineer, Mission Scientist, Comms Officer, Safety & Budget Chief), and everyone must vote GO before
   launch. Emergencies call on the player whose job it is.
@@ -187,6 +194,19 @@ Every value in the game is badged so players can tell real data from game assump
 `DECISIONS.md` for the full list of assumptions.
 
 ## Data sources and credits
+
+Space-hazard quiz facts (retrieved November 2026):
+
+- Black holes: https://science.nasa.gov/universe/black-holes/ ,
+  https://science.nasa.gov/universe/black-holes/types/ ,
+  https://science.nasa.gov/universe/black-holes/anatomy/
+- Asteroids: https://science.nasa.gov/solar-system/asteroids/ and DART: https://science.nasa.gov/mission/dart/
+- Gravity assists: https://science.nasa.gov/learn/basics-of-space-flight/chapter4-1/
+- Space junk: https://orbitaldebris.jsc.nasa.gov/faq/
+- Search for life: https://science.nasa.gov/exoplanets/search-for-life/
+- Voyager Golden Record: https://science.nasa.gov/mission/voyager/golden-record-contents/
+
+Planet data and other credits:
 
 - **NASA Exoplanet Archive**, Planetary Systems Composite Parameters (`pscomppars`):
   https://exoplanetarchive.ipac.caltech.edu/. The retrieval date is shown in the game footer.

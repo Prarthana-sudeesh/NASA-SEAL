@@ -13,7 +13,7 @@ import { sfx } from '../sound.ts';
 import { useCollections } from '../../store/collectionStore.ts';
 import { BADGES } from '../collection.ts';
 import { crewLine } from '../crew.ts';
-import { EVENTS } from '../events.ts';
+import { handled } from '../events.ts';
 
 function CountUp({ to }: { to: number }) {
   const reduced = useReducedMotion();
@@ -59,7 +59,6 @@ export function Result() {
   const key = run && attempt ? `${run.id}:${attempt.n}` : null;
   useEffect(() => {
     if (!run || !attempt || !planet || !key) return;
-    const ev = attempt.event;
     addFlight(player?.username ?? '', {
       key,
       planet,
@@ -67,7 +66,7 @@ export function Result() {
       crew: attempt.build.crew,
       result: attempt.result,
       quizCorrect: !!attempt.quiz?.correct,
-      emergencyHandled: !!ev?.resolved && ev.choice === EVENTS[ev.id].answer,
+      hazards: (attempt.events ?? []).map((e) => ({ id: e.id, handled: handled(e) })),
       teamSize: attempt.team?.length ?? 1,
     });
   }, [key, run, attempt, planet, addFlight, player]);
@@ -100,7 +99,7 @@ export function Result() {
   ];
   return (
     <Stage>
-      <CommandCenter>
+      <CommandCenter theme={run.difficulty}>
         <Hologram planet={planet} size="16%" />
         <TopMenu />
         {r.success && (

@@ -72,8 +72,8 @@ export function Collection() {
                 📸 Crew photos
               </Pill>
               <span className="ml-auto text-[#9fd8e6]">
-                Science checks right: {quizCorrect} · Emergencies handled: {emergencies} · Fix my
-                rocket best: {puzzleBest}
+                Science checks right: {quizCorrect} · Hazards handled: {emergencies} · Fix my rocket
+                best: {puzzleBest}
               </span>
             </div>
 

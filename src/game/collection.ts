@@ -15,7 +15,9 @@ export type BadgeId =
   | 'team-player'
   | 'fix-it-pro'
   | 'postcard-collector'
-  | 'grand-tour';
+  | 'grand-tour'
+  | 'black-hole-survivor'
+  | 'hazard-hero';
 
 export interface BadgeInfo {
   id: BadgeId;
@@ -51,7 +53,7 @@ export const BADGES: BadgeInfo[] = [
     how: 'Score 1,000 points or more in one mission.',
   },
   { id: 'quiz-whiz', icon: '🧠', name: 'Quiz Whiz', how: 'Answer 5 science checks correctly.' },
-  { id: 'cool-head', icon: '🧊', name: 'Cool Head', how: 'Handle 3 emergencies correctly.' },
+  { id: 'cool-head', icon: '🧊', name: 'Cool Head', how: 'Handle 3 space hazards correctly.' },
   {
     id: 'team-player',
     icon: '🤝',
@@ -66,6 +68,18 @@ export const BADGES: BadgeInfo[] = [
     how: 'Collect postcards from 5 different planets.',
   },
   { id: 'grand-tour', icon: '🌌', name: 'Grand Tour', how: 'Collect all 15 planet postcards.' },
+  {
+    id: 'black-hole-survivor',
+    icon: '🕳️',
+    name: 'Black Hole Survivor',
+    how: 'Make the right call when a black hole appears.',
+  },
+  {
+    id: 'hazard-hero',
+    icon: '🦸',
+    name: 'Hazard Hero',
+    how: 'Handle all three hazards on one Hard flight.',
+  },
 ];
 
 export interface Photo {
@@ -110,7 +124,8 @@ export interface FlightRecord {
   crew: number;
   result: Result;
   quizCorrect: boolean;
-  emergencyHandled: boolean;
+  /** Each hazard on the flight and whether the crew handled it. */
+  hazards: { id: string; handled: boolean }[];
   teamSize: number;
 }
 
@@ -140,7 +155,7 @@ export function recordFlight(
     photos: [...prev.photos],
     seen: [...prev.seen, f.key].slice(-200),
     quizCorrect: prev.quizCorrect + (f.quizCorrect ? 1 : 0),
-    emergencies: prev.emergencies + (f.emergencyHandled ? 1 : 0),
+    emergencies: prev.emergencies + f.hazards.filter((h) => h.handled).length,
   };
   const r = f.result;
   let postcard: string | null = null;
@@ -163,6 +178,14 @@ export function recordFlight(
   award(c, badges, 'quiz-whiz', c.quizCorrect >= 5, date);
   award(c, badges, 'cool-head', c.emergencies >= 3, date);
   award(c, badges, 'team-player', r.success && f.teamSize >= 2, date);
+  award(
+    c,
+    badges,
+    'black-hole-survivor',
+    f.hazards.some((h) => h.id === 'blackhole' && h.handled),
+    date,
+  );
+  award(c, badges, 'hazard-hero', f.hazards.length >= 3 && f.hazards.every((h) => h.handled), date);
   const cards = Object.keys(c.postcards).length;
   award(c, badges, 'postcard-collector', cards >= 5, date);
   award(c, badges, 'grand-tour', cards >= TOTAL_PLANETS, date);

@@ -9,11 +9,12 @@ import {
   launchBlocks,
   quizFor,
   simulate,
+  STAGES,
   type Build,
   type Dials,
   type Result,
 } from '../game/engine.ts';
-import { pickEvent, type EventId, EVENTS } from '../game/events.ts';
+import { handled, planHazards, type FlightEvent, type HazardId } from '../game/events.ts';
 import { MAX_TEAM, type Team } from '../game/team.ts';
 import { safeStorage, setStorageNotice, uid } from './persistence.ts';
 
@@ -40,8 +41,10 @@ export interface Attempt {
   dials: Dials;
   result: Result;
   quiz: { id: string; correct: boolean } | null;
-  /** Surprise emergency during the journey (absent if none happened). */
-  event?: { id: EventId; choice: number | null; resolved: boolean };
+  /** Surprise hazards during the flight (absent if none happened). */
+  events?: FlightEvent[];
+  /** Older saves: a single emergency. */
+  event?: { id: HazardId; choice: number | null; resolved: boolean };
   /** Team members who flew this mission (team mode only). */
   team?: string[];
   at: string;
@@ -95,8 +98,8 @@ export interface GameState {
   next: () => void;
   newCampaign: () => void;
   markSubmitted: (id: string) => void;
-  /** Answer the current flight's emergency (null = ran out of time). */
-  resolveEvent: (choice: number | null) => void;
+  /** Answer hazard number `index` on the current flight (choice null = ran out of time). */
+  resolveEvent: (index: number, choice: number | null) => void;
   /** Start team mode with these player names (first = signed-in player), or null for solo. */
   setTeam: (members: string[] | null) => void;
 }
@@ -175,9 +178,17 @@ export const useGame = create<GameState>()(
         const answered =
           answer && answer.planetId === planet.id && answer.mission === n ? answer.choice : null;
         const correct = answered === null ? null : answered === q.answer;
-        const result = simulate(build, dials, planet, difficulty, correct);
-        // An emergency can strike once the rocket has left Earth.
-        const eventId = result.failedAt === 'launch' ? null : pickEvent(`${run.id}:${n}`);
+        const first = simulate(build, dials, planet, difficulty, correct);
+        // Hazards strike only on stages the rocket reaches (and never before it leaves Earth).
+        const failIdx = first.failedAt ? STAGES.indexOf(first.failedAt) : STAGES.length;
+        const reachable = STAGES.filter((_, i) => i >= 1 && i <= failIdx);
+        const events = planHazards(`${run.id}:${n}`, difficulty, n, reachable);
+        const result = events.length
+          ? simulate(build, dials, planet, difficulty, correct, {
+              handled: 0,
+              total: events.length,
+            })
+          : first;
         const team = get().team;
         const attempt: Attempt = {
           n,
@@ -186,7 +197,7 @@ export const useGame = create<GameState>()(
           dials,
           result,
           quiz: correct === null ? null : { id: q.id, correct },
-          ...(eventId ? { event: { id: eventId, choice: null, resolved: false } } : {}),
+          ...(events.length ? { events } : {}),
           ...(team && team.members.length > 1 ? { team: team.members } : {}),
           at: new Date().toISOString(),
         };
@@ -208,22 +219,26 @@ export const useGame = create<GameState>()(
       newCampaign: () =>
         set((s) => ({ run: newRun(s.difficulty), screen: 'mission', step: 'parts' })),
       markSubmitted: (id) => set((s) => (s.run ? { run: { ...s.run, submittedEntryId: id } } : {})),
-      resolveEvent: (choice) => {
+      resolveEvent: (index, choice) => {
         const run = get().run;
         const a = run?.attempts.at(-1);
         const planet = getPlanet(a?.planetId);
-        if (!run || !a?.event || a.event.resolved || !planet) return;
-        const handled = choice !== null && choice === EVENTS[a.event.id].answer;
+        const ev = a?.events?.[index];
+        if (!run || !a?.events || !ev || ev.resolved || !planet) return;
+        const events = a.events.map((e, i) => (i === index ? { ...e, choice, resolved: true } : e));
         const updated: Attempt = {
           ...a,
-          event: { ...a.event, choice, resolved: true },
+          events,
           result: simulate(
             a.build,
             a.dials,
             planet,
             run.difficulty,
             a.quiz ? a.quiz.correct : null,
-            handled,
+            {
+              handled: events.filter(handled).length,
+              total: events.length,
+            },
           ),
         };
         set({ run: { ...run, attempts: [...run.attempts.slice(0, -1), updated] } });

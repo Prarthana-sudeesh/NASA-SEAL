@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 import { PlanetVisual } from '../../components/PlanetVisual.tsx';
 import type { Planet } from '../../data/types.ts';
 import { useReducedMotion } from '../../hooks/useReducedMotion.ts';
+import type { Difficulty } from '../../data/types.ts';
+import { SpaceView } from './SpaceView.tsx';
 
 function seeded(seed: number) {
   let s = seed;
@@ -63,18 +65,20 @@ export function Stage({ children, className = '' }: { children: ReactNode; class
 }
 
 /** Mission control: curved windows onto space, wall screens, central hologram projector. */
-export function CommandCenter({ children }: { children?: ReactNode }) {
-  const reduced = useReducedMotion();
+export function CommandCenter({
+  children,
+  theme,
+}: {
+  children?: ReactNode;
+  /** Difficulty whose world shows through the windows. */
+  theme?: Difficulty;
+}) {
   return (
     <div className="absolute inset-0 overflow-clip bg-[#070b18]">
       {/* Space beyond the windows */}
       <div className="absolute inset-x-0 top-0 h-[62%] bg-[radial-gradient(ellipse_at_50%_120%,#1d3a7a_0%,#0a1330_45%,#050814_80%)]">
         <Starfield />
-        <motion.div
-          className="absolute -bottom-[55%] left-[-10%] h-[110%] w-[120%] rounded-[50%] bg-[radial-gradient(circle_at_50%_10%,#7cc8ff,#2a6fd0_35%,#0d2c66_60%,transparent_75%)] opacity-80"
-          animate={reduced ? undefined : { x: ['0%', '-2%', '0%'] }}
-          transition={{ duration: 30, repeat: Infinity, ease: 'easeInOut' }}
-        />
+        <SpaceView theme={theme} />
       </div>
       {/* Window frame: curved ceiling ring and angled mullions */}
       <svg

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { announce } from '../../components/LiveRegion.tsx';
 import { PlanetVisual } from '../../components/PlanetVisual.tsx';
 import { getPlanet } from '../../data/planets.ts';
@@ -8,12 +8,15 @@ import { useGame, currentAttempt } from '../../store/gameStore.ts';
 import { useSettings } from '../../store/settingsStore.ts';
 import { SCORING, getPart, type HullPart } from '../config.ts';
 import { STAGES, STAGE_LABELS, outsidePressure, type Stage as MStage } from '../engine.ts';
-import { duckMusic, rumble, sfx } from '../sound.ts';
+import { duckMusic, hazardLoop, rumble, setMusicMode, sfx, type SfxName } from '../sound.ts';
 import { RocketArt } from '../ui/RocketArt.tsx';
 import { Stage, Starfield } from '../ui/Scenery.tsx';
 import { AnimationSlot } from '../animations/slots.tsx';
 import { crewLine, type Moment } from '../crew.ts';
-import { EVENTS, EVENT_SECONDS } from '../events.ts';
+import { EVENT_SECONDS, HAZARDS, type HazardScene as SceneKind } from '../events.ts';
+import { HazardScene } from '../ui/HazardScene.tsx';
+import { EarthArt } from '../ui/EarthArt.tsx';
+import { Splashdown } from '../ui/Splashdown.tsx';
 import { whoDecides } from '../team.ts';
 import { EventPanel } from '../ui/EventPanel.tsx';
 import { SpeechBubble } from '../ui/Pixel.tsx';
@@ -43,6 +46,8 @@ function playStageSound(stage: MStage, failing: boolean, failId?: string) {
     else after(700, () => sfx('explosion'));
     return;
   }
+  // Quindar beep as the crew radios in.
+  if (stage !== 'launch') after(700, () => sfx('quindar', 400));
   switch (stage) {
     case 'launch':
       sfx('ignition');
@@ -314,12 +319,38 @@ export function Launch() {
   const [idx, setIdx] = useState(-1); // -1 = countdown
   const [done, setDone] = useState(false);
   const told = useRef(false);
-  const [eventAck, setEventAck] = useState(false);
+  const [acked, setAcked] = useState<number[]>([]);
   const result = attempt?.result;
-  const ev = attempt?.event;
+  const evs = useMemo(() => attempt?.events ?? [], [attempt]);
   // The emergency interrupts the start of the journey; the flight waits until the team continues.
-  const eventPending = !!ev && !eventAck;
-  const paused = idx === 1 && eventPending;
+  // A hazard interrupts the start of its stage; the flight waits until the crew continues.
+  const pendingIdx = evs.findIndex((e, i) => !acked.includes(i) && STAGES.indexOf(e.stage) === idx);
+  const paused = idx >= 1 && !done && pendingIdx >= 0;
+  const cur = paused ? evs[pendingIdx] : null;
+  const nextUnacked = evs.findIndex((_, i) => !acked.includes(i));
+  const onAnswer = useCallback(
+    (choice: number | null) => resolveEvent(pendingIdx, choice),
+    [resolveEvent, pendingIdx],
+  );
+  const hazardScene: SceneKind | null = cur ? HAZARDS[cur.id].scene : null;
+  useEffect(() => {
+    if (!hazardScene) return;
+    const ONE_SHOT: Record<SceneKind, SfxName> = {
+      blackhole: 'blackhole',
+      asteroids: 'asteroid',
+      gravity: 'slingshot',
+      aliens: 'alien',
+      debris: 'junk',
+      alarm: 'alarm',
+    };
+    sfx(ONE_SHOT[hazardScene]);
+    return hazardLoop(hazardScene);
+  }, [hazardScene, pendingIdx, sound]);
+  // Epic voyage music once the rocket is in space; calm music again back at mission control.
+  useEffect(() => {
+    if (idx >= 1) setMusicMode('travel');
+  }, [idx]);
+  useEffect(() => () => setMusicMode('calm'), []);
   const lastIdx = useMemo(
     () => (result?.failedAt ? STAGES.indexOf(result.failedAt) : STAGES.length - 1),
     [result],
@@ -350,9 +381,9 @@ export function Launch() {
     return rumble();
   }, [sound, idx]);
   useEffect(() => {
-    duckMusic(!done);
+    duckMusic(!done && idx <= 0);
     return () => duckMusic(false);
-  }, [done]);
+  }, [done, idx]);
 
   useEffect(() => {
     if (done && result && planet && !told.current) {
@@ -627,14 +658,21 @@ export function Launch() {
         );
       }
       case 'return':
+        // Safe home: only the crew capsule comes back, under parachutes, into the ocean.
+        if (done && result.success) return <Splashdown crew={crew} />;
         return space(
           <>
             <motion.div
-              className="absolute left-[6%] top-1/2 h-[40%] w-[22%] -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_35%_35%,#cfeeff,#3a8de0_45%,#123a7a_70%)] shadow-[0_0_40px_#3a8de0]"
-              initial={{ scale: 0.15 }}
-              animate={{ scale: failing ? 0.3 : 1 }}
+              className="absolute left-[2%] top-1/2 w-[30%] -translate-y-1/2"
+              initial={{ scale: 0.2 }}
+              animate={{ scale: failing ? 0.35 : 1 }}
               transition={{ duration: reduced ? 0 : DUR.return }}
-            />
+            >
+              <EarthArt
+                spinSeconds={reduced ? undefined : 40}
+                className="h-auto w-full drop-shadow-[0_0_30px_#3a8de0]"
+              />
+            </motion.div>
             {ship(
               -90,
               failing
@@ -643,19 +681,16 @@ export function Launch() {
                     transition: { duration: reduced ? 0 : FAIL_DUR },
                   }
                 : {
-                    animate: { x: [180, -40] },
+                    // Re-entry: the rocket glows as it hits Earth's atmosphere.
+                    animate: {
+                      x: [180, -40],
+                      filter: [
+                        'drop-shadow(0 0 0px #ff7a1a)',
+                        'drop-shadow(0 0 22px #ff7a1a) drop-shadow(0 0 8px #ffe27a)',
+                      ],
+                    },
                     transition: { duration: reduced ? 0 : DUR.return },
                   },
-            )}
-            {done && result.success && (
-              <motion.div
-                className="absolute left-[12%] top-[38%] text-[40px]"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1, rotate: [0, 10, -10, 0] }}
-                aria-hidden="true"
-              >
-                🪂
-              </motion.div>
             )}
           </>,
           true,
@@ -696,7 +731,8 @@ export function Launch() {
   const moment: Moment =
     idx === -1 ? 'countdown' : paused ? 'event' : done && result.success ? 'home' : stage!;
   const chatter = crewLine(crew, moment, failing && !paused ? (failCheck?.id ?? null) : null);
-  const event = ev ? EVENTS[ev.id] : null;
+
+  const hazard = cur ? HAZARDS[cur.id] : null;
 
   return (
     <Stage>
@@ -706,7 +742,13 @@ export function Launch() {
       >
         <AnimatePresence mode="wait">
           <motion.div
-            key={idx === -1 ? 'launch' : stage === 'launch' ? 'launch' : stage!}
+            key={
+              idx === -1 || stage === 'launch'
+                ? 'launch'
+                : stage === 'return' && done && result.success
+                  ? 'splashdown'
+                  : stage!
+            }
             className="absolute inset-0"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -722,20 +764,23 @@ export function Launch() {
       {stage === 'launch' && !failing && <AnimationSlot id="lift-off" />}
       {stage === 'landing' && !failing && <AnimationSlot id="landing" />}
       {done && result.success && <AnimationSlot id="homecoming" />}
+      <AnimatePresence>
+        {hazardScene && <HazardScene key={pendingIdx} kind={hazardScene} />}
+      </AnimatePresence>
       {paused && <AnimationSlot id="emergency" className="z-20" />}
       {paused && (
         <motion.div
           className="pointer-events-none absolute inset-0 z-20 shadow-[inset_0_0_120px_40px_rgba(255,40,40,0.55)]"
           initial={{ opacity: 0 }}
           animate={
-            ev?.resolved
+            cur?.resolved
               ? { opacity: 0.25 }
               : reduced
                 ? { opacity: 0.7 }
                 : { opacity: [0.25, 1, 0.25] }
           }
           transition={
-            ev?.resolved || reduced ? { duration: 0.4 } : { duration: 1, repeat: Infinity }
+            cur?.resolved || reduced ? { duration: 0.4 } : { duration: 1, repeat: Infinity }
           }
           aria-hidden="true"
         />
@@ -821,14 +866,18 @@ export function Launch() {
         />
       </div>
 
-      {paused && event && (
+      {cur && hazard && (
         <EventPanel
-          event={event}
+          key={pendingIdx}
+          event={cur}
+          counter={evs.length > 1 ? `Hazard ${pendingIdx + 1} of ${evs.length}` : null}
           seconds={EVENT_SECONDS[run!.difficulty]}
-          who={whoDecides(team, event.role)}
-          answered={ev?.resolved ? ev.choice : undefined}
-          onAnswer={resolveEvent}
-          onContinue={() => setEventAck(true)}
+          who={whoDecides(team, hazard.role)}
+          onAnswer={onAnswer}
+          onContinue={() => {
+            sfx('quindarOut');
+            setAcked((a) => [...a, pendingIdx]);
+          }}
         />
       )}
 
@@ -837,7 +886,9 @@ export function Launch() {
           <button
             type="button"
             className="tool-btn px-3 py-1 text-[12px]"
-            onClick={() => (eventPending && idx < 1 ? setIdx(1) : setDone(true))}
+            onClick={() =>
+              nextUnacked >= 0 ? setIdx(STAGES.indexOf(evs[nextUnacked].stage)) : setDone(true)
+            }
           >
             Skip ⏭
           </button>
