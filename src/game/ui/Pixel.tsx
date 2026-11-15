@@ -6,7 +6,7 @@ import { useReducedMotion } from '../../hooks/useReducedMotion.ts';
 
 export type Palette = Record<string, string>;
 
-const ASTRO_PALETTE: Palette = {
+export const ASTRO_PALETTE: Palette = {
   K: '#0b0f1e', // outline
   W: '#ffffff',
   w: '#c9d3e6', // suit shade

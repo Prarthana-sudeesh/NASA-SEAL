@@ -44,6 +44,7 @@ import {
 } from '../engine.ts';
 import { Dial } from '../ui/Dial.tsx';
 import { QuizPanel } from '../ui/QuizPanel.tsx';
+import { DIAL_ROLE, ROLES, SLOT_ROLE, rolesOf, whoDecides } from '../team.ts';
 import { BigButton, TopMenu } from '../ui/Hud.tsx';
 import { Astronaut, Scientist, SpeechBubble } from '../ui/Pixel.tsx';
 import { PartIcon, RocketArt } from '../ui/RocketArt.tsx';
@@ -213,7 +214,18 @@ export function Build() {
     quiz,
     answerQuiz,
     nextMissionNumber,
+    team,
   } = useGame();
+  // Team mode: everyone must say GO before launch. Any change to the rocket resets the vote.
+  const [votes, setVotes] = useState<Record<string, boolean>>({});
+  const voteKey = JSON.stringify([build, dials]);
+  const [votedFor, setVotedFor] = useState(voteKey);
+  if (votedFor !== voteKey) {
+    setVotedFor(voteKey);
+    setVotes({});
+  }
+  const members = team && team.members.length > 1 ? team.members : [];
+  const allGo = members.every((m) => votes[m]);
   const [tool, setTool] = useState<SlotKind>('payload');
   const [dragging, setDragging] = useState<string | null>(null);
   const [flash, setFlash] = useState(0);
@@ -344,6 +356,11 @@ export function Build() {
                   <h2 className="font-pixel mb-2 text-[clamp(7px,0.8vw,10px)] uppercase tracking-wider text-[#ffe24a]">
                     {SLOT_LABELS[tool]}
                   </h2>
+                  {whoDecides(team, SLOT_ROLE[tool]) && (
+                    <p className="-mt-1 mb-2 text-[clamp(8px,0.85vw,11px)] text-[#9fdfff]">
+                      {whoDecides(team, SLOT_ROLE[tool])} decides
+                    </p>
+                  )}
                   <ul className="flex min-h-0 flex-1 flex-col gap-[3%] overflow-y-auto pr-1">
                     {partsOf(tool).map((part) => (
                       <PartCard
@@ -425,6 +442,7 @@ export function Build() {
                 mission={mission}
                 choice={quizChoice}
                 onAnswer={answerQuiz}
+                who={whoDecides(team, 'scientist')}
               />
             ) : (
               <motion.section
@@ -438,6 +456,13 @@ export function Build() {
                 <h2 className="font-pixel text-[clamp(7px,0.8vw,10px)] uppercase tracking-wider text-[#ffe24a]">
                   Set the dials
                 </h2>
+                {members.length > 0 && (
+                  <p className="text-center text-[clamp(8px,0.85vw,11px)] text-[#9fdfff]">
+                    Fuel &amp; thrust: {whoDecides(team, DIAL_ROLE.fuel)}
+                    <br />
+                    Pressure: {whoDecides(team, DIAL_ROLE.pressure)}
+                  </p>
+                )}
                 <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                   <Dial
                     label="Fuel"
@@ -491,6 +516,36 @@ export function Build() {
                   <p className="text-center text-[11px] text-[#b9d8ff]">
                     Hard mode: no flight checks shown. Trust your maths!
                   </p>
+                )}
+                {members.length > 0 && (
+                  <div className="w-full border-t border-white/20 pt-1 text-white">
+                    <p className="font-pixel text-center text-[clamp(7px,0.75vw,9px)] uppercase tracking-wider text-[#ffe24a]">
+                      Go / No-Go poll
+                    </p>
+                    <ul
+                      className="mt-1 flex flex-wrap justify-center gap-1"
+                      aria-label="Team launch vote"
+                    >
+                      {members.map((m, i) => (
+                        <li key={m}>
+                          <button
+                            type="button"
+                            aria-pressed={!!votes[m]}
+                            onClick={() => {
+                              sfx(votes[m] ? 'click' : 'confirm');
+                              setVotes((v) => ({ ...v, [m]: !v[m] }));
+                            }}
+                            className={`rounded-md border-2 px-2 py-0.5 text-[clamp(8px,0.85vw,12px)] font-bold ${votes[m] ? 'border-ok bg-ok/30' : 'border-white/40 bg-black/30'}`}
+                            title={rolesOf(team!, i)
+                              .map((r) => ROLES[r].title)
+                              .join(' + ')}
+                          >
+                            {m}: {votes[m] ? 'GO ✓' : 'GO?'}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </motion.section>
             )}
@@ -571,13 +626,18 @@ export function Build() {
                   const a = launch();
                   if (a) announce(`Launching mission ${a.n} to ${planet.name}.`);
                 }}
-                disabled={blocks.length > 0}
-                describedBy={blocks.length ? 'launch-blocks' : undefined}
+                disabled={blocks.length > 0 || !allGo}
+                describedBy={blocks.length ? 'launch-blocks' : !allGo ? 'launch-vote' : undefined}
                 className="text-[clamp(20px,3vw,42px)]"
               >
                 LAUNCH
               </BigButton>
             </div>
+          )}
+          {blocks.length === 0 && !allGo && step === 'dials' && (
+            <p id="launch-vote" className="outlined text-[12px] text-[#ffe24a]">
+              Waiting for the whole team to say GO.
+            </p>
           )}
           {blocks.length > 0 && step === 'dials' && (
             <p id="launch-blocks" role="alert" className="outlined text-[12px] text-[#ff8a8a]">

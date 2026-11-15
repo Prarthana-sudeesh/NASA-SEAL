@@ -10,10 +10,12 @@ interface Props {
   mission: number;
   choice: number | null;
   onAnswer: (choice: number) => void;
+  /** Who answers, in team mode. */
+  who?: string | null;
 }
 
 /** Dr. Hart's one-question science check (worth bonus points). */
-export function QuizPanel({ planet, mission, choice, onAnswer }: Props) {
+export function QuizPanel({ planet, mission, choice, onAnswer, who }: Props) {
   const q = quizFor(planet, mission);
   const answered = choice !== null;
   return (
@@ -28,6 +30,7 @@ export function QuizPanel({ planet, mission, choice, onAnswer }: Props) {
       <h2 className="font-pixel text-[clamp(7px,0.8vw,10px)] uppercase tracking-wider text-[#ffe24a]">
         Science check · +{SCORING.quiz} pts
       </h2>
+      {who && <p className="text-[clamp(8px,0.85vw,11px)] text-[#9fdfff]">{who} answers</p>}
       <p id="quiz-q" className="text-[clamp(10px,1.05vw,14px)] font-semibold leading-snug">
         {q.question}
       </p>

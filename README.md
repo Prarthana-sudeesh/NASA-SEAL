@@ -72,6 +72,23 @@ bundled in `src/data/planets.json`.
    debrief explaining exactly why the mission succeeded or failed.
 7. **Ten missions per campaign**: your average goes on that difficulty's leaderboard.
 
+### Extra fun
+
+- **Surprise emergencies**: on most flights something goes wrong mid-journey (solar flare, micrometeoroid
+  hit, lost signal, computer glitch, drifting off course, power drop). Pick the right fix before the timer
+  runs out for +50 points, and learn why it's the fix real crews use.
+- **Team mode** (👥 in Mission control): 2–4 players share one device. Each player owns jobs (Flight
+  Engineer, Mission Scientist, Comms Officer, Safety & Budget Chief), and everyone must vote GO before
+  launch. Emergencies call on the player whose job it is.
+- **Fix my rocket** (🔧): a quick mini-game. Each rocket has one wrong part; find it before time runs out.
+  Five rockets per round, with bonus points for speed.
+- **Crew personalities**: Cmdr. Kai (calm), Rosa (a worrier) and Milo (the joker) chat during every flight
+  and react to what happens. Robot probes beep instead.
+- **Collection** (🏅): land on a planet to collect its postcard of real NASA facts, earn 11 badges, and fill
+  a photo album with every crew you bring home. Each player name has its own collection on the device.
+- **Animation slots**: five spots are reserved for the team's own animations. See
+  `src/game/animations/README.md`.
+
 ## Project structure
 
 ```

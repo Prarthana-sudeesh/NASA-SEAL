@@ -312,6 +312,8 @@ export const SCORING = {
   pressure: 100,
   parts: 150,
   quiz: 50,
+  /** Handling a surprise emergency correctly during the flight. */
+  emergency: 50,
   crewBonus: 0.1,
   crewPenalty: 60,
 } as const;

@@ -11,6 +11,8 @@ import { outsidePressure } from '../engine.ts';
 import { BigButton, Pill, Readout, TopMenu } from '../ui/Hud.tsx';
 import { Astronaut, Scientist, SpeechBubble } from '../ui/Pixel.tsx';
 import { CommandCenter, Hologram, Stage, WallScreen } from '../ui/Scenery.tsx';
+import { AnimationSlot } from '../animations/slots.tsx';
+import { TeamPanel } from '../ui/TeamPanel.tsx';
 
 type Tab = 'level' | 'description' | 'stats' | 'resources';
 const TABS: { id: Tab; label: string }[] = [
@@ -122,8 +124,10 @@ export function Mission() {
     choosePlanet,
     go,
     newCampaign,
+    team,
   } = useGame();
   const [line, setLine] = useState(0);
+  const [teamOpen, setTeamOpen] = useState(false);
   const cfg = DIFFICULTIES[difficulty];
   const planet = getPlanet(planetId) ?? getPlanet(cfg.planets[0])!;
   const activeRun = run && run.difficulty === difficulty ? run : null;
@@ -144,6 +148,7 @@ export function Mission() {
     <Stage>
       <CommandCenter>
         <Hologram planet={planet} size="24%" />
+        <AnimationSlot id="mission-intro" />
         <Readout
           className="left-[1.5%] top-[2%] z-10"
           lines={[
@@ -158,6 +163,7 @@ export function Mission() {
             ['Max crew', String(cfg.maxCrew)],
             ['Mission', `${Math.min(done + 1, ATTEMPTS_PER_RUN)} / ${ATTEMPTS_PER_RUN}`],
             ['Average', String(avg(totals))],
+            ...(team ? [['Team', `${team.members.length} players`] as [string, string]] : []),
           ]}
         />
         <TopMenu />
@@ -255,6 +261,34 @@ export function Mission() {
             )}
           </div>
         </div>
+        {/* Extra modes */}
+        <nav
+          aria-label="More to do"
+          className="absolute bottom-[5%] right-[2%] z-10 flex flex-col items-stretch gap-[0.5vw]"
+        >
+          <button
+            type="button"
+            className="tool-btn px-3 py-1 text-[clamp(10px,1.1vw,15px)]"
+            onClick={() => setTeamOpen(true)}
+          >
+            👥 {team ? `Team of ${team.members.length}` : 'Team mode'}
+          </button>
+          <button
+            type="button"
+            className="tool-btn px-3 py-1 text-[clamp(10px,1.1vw,15px)]"
+            onClick={() => go('puzzle')}
+          >
+            🔧 Fix my rocket
+          </button>
+          <button
+            type="button"
+            className="tool-btn px-3 py-1 text-[clamp(10px,1.1vw,15px)]"
+            onClick={() => go('collection')}
+          >
+            🏅 Collection
+          </button>
+        </nav>
+        {teamOpen && <TeamPanel onClose={() => setTeamOpen(false)} />}
       </CommandCenter>
     </Stage>
   );
