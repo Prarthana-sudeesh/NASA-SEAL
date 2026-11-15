@@ -9,6 +9,23 @@ launch. Hand-drawn cutscenes show what happens, then the game explains exactly w
 
 Not an official NASA product. No NASA logos or insignia are used.
 
+## Development timeline (disclosure)
+
+We want to be upfront about what was made when. The commit history is unedited, so every date can be checked.
+
+- **Oct 20–21:** the repository was created and a first file was uploaded.
+- **Nov 12:** we explored an early prototype ("Rocket Builder") in 7 commits.
+- **Nov 15, during the event:** the submitted game, Orbital Uprise, was **rebuilt from scratch**. The rebuild
+  deleted the prototype's game code; the game itself (screens, rocket workshop, mission engine, scoring,
+  cutscenes, space hazards, quizzes, mini-games, badges, leaderboard and tests) was all written during the event.
+- **Carried over from the Nov 12 prototype:** only project setup files (`package.json`, TypeScript, Vite,
+  lint and formatting config, `.gitignore`, the GitHub Pages workflow, `index.html`, the test setup file) and
+  the NASA Exoplanet Archive planet-data script with its data files (`scripts/fetch-planets.ts`,
+  `src/data/planets.json`, `src/data/planets.ts`, `src/data/types.ts`, `scripts/balance-check.ts`). Most of
+  these were rewritten on Nov 15.
+- The hazard backdrops, the launch-site pixel art, hazard quiz questions and hazard sounds were adapted during
+  the event from our earlier prototype branch (`Secondary-prototype`).
+
 ## Run it
 
 Needs Node 22.18 or newer.
@@ -54,7 +71,7 @@ Without configuration the leaderboard is stored in the browser and shows
 1. Create a free project at supabase.com.
 2. Open SQL Editor → New query, paste [`supabase/schema.sql`](supabase/schema.sql) and run it. It creates the
    `leaderboard` table, row-level security (public read; public insert only for names of 1–20 characters,
-   difficulty easy/medium/hard, exactly 10 attempts, average 0–1400; no update or delete), and adds the table
+   difficulty easy/medium/hard, exactly 3 attempts, average 0–1400; no update or delete), and adds the table
    to realtime so boards refresh live.
 3. Project Settings → API: copy the Project URL and the `anon` public key into `.env.local`:
 
@@ -138,13 +155,13 @@ Full reasoning and the balance numbers are in [DECISIONS.md](DECISIONS.md). In s
   Director missions need radiation rating ≥ 2. Cadet simplifies these; Engineer adds comms and heat; Flight
   Director checks everything.
 - **Score per launch:** mission 400, performance 200, budget 200, part suitability 100, resource balance 100,
-  then × (1 + 0.1 × crew) on success or × (1 − 0.15 × crew) on failure. Max 1,400. Run score = average of 10.
+  then × (1 + 0.1 × crew) on success or × (1 − 0.15 × crew) on failure. Max 1,400. Run score = average of 3.
 
 ## Debug and demo tools
 
 Add `?debug=1` to the URL (works in production builds too, only with the flag) to:
 play any of the seven outcome sequences on its own, force the next launch's cutscene, jump to any screen,
-fill a run with 10 random scores, and switch the leaderboard to offline mode.
+fill a run with 3 random scores, and switch the leaderboard to offline mode.
 
 ## Accessibility
 
