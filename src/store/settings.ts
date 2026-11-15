@@ -33,7 +33,7 @@ export const useSettings = create<SettingsState>()(
       set: (patch) => set(patch),
       reset: () => set(DEFAULTS),
     }),
-    { name: 'starbound.settings.v1' },
+    { name: 'orbitaluprise.settings.v1' },
   ),
 );
 

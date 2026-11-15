@@ -134,7 +134,7 @@ export const useGame = create<GameState>()(
       },
     }),
     {
-      name: 'starbound.run.v1',
+      name: 'orbitaluprise.run.v1',
       partialize: (s) => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { forcedOutcome, screen, ...rest } = s;

@@ -1,4 +1,3 @@
-import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useCalm } from '../store/settings.ts';
 
@@ -30,14 +29,13 @@ export function CassFace({ mood = 'happy', size = 96 }: { mood?: CassMood; size?
       <path d="M40 59 q10 10 20 0" stroke="#0B1026" strokeWidth="3.5" fill="#E8642C" strokeLinecap="round" />
     );
   return (
-    <motion.svg
+    <svg
       width={size}
       height={size}
       viewBox="0 0 100 100"
       role="img"
       aria-label="CAPCOM Cass, a round robot with a headset"
-      animate={calm ? undefined : { y: [0, -4, 0], rotate: mood === 'cheer' ? [0, -6, 6, 0] : [0, 1.5, -1.5, 0] }}
-      transition={{ duration: mood === 'cheer' ? 0.9 : 3.2, repeat: Infinity, ease: 'easeInOut' }}
+      className={calm ? '' : mood === 'cheer' ? 'cheer' : 'bob'}
     >
       {/* antenna */}
       <line x1="50" y1="14" x2="50" y2="4" stroke="#05070F" strokeWidth="3" />
@@ -59,7 +57,7 @@ export function CassFace({ mood = 'happy', size = 96 }: { mood?: CassMood; size?
       <rect x="79" y="40" width="12" height="20" rx="5" fill="#E8642C" stroke="#05070F" strokeWidth="3" />
       <path d="M15 58 Q18 78 38 76" fill="none" stroke="#05070F" strokeWidth="3" />
       <circle cx="40" cy="76" r="4" fill="#FFC94A" stroke="#05070F" strokeWidth="2.5" />
-    </motion.svg>
+    </svg>
   );
 }
 

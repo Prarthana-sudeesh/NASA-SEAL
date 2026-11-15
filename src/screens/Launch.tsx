@@ -4,9 +4,9 @@ import { useGame } from '../store/game.ts';
 import { useCalm } from '../store/settings.ts';
 import { getPlanet } from '../data/planets.ts';
 import { evaluateMission, PHASES } from '../engine/mission.ts';
-import { planCutscene, OUTCOME_SAMPLE_CAUSE, type Segment } from '../engine/cutscenes.ts';
+import { planCutscene, OUTCOME_SAMPLE_CAUSE } from '../engine/cutscenes.ts';
 import { CutscenePlayer } from '../cutscene/CutscenePlayer.tsx';
-import type { Cue } from '../cutscene/manifest.ts';
+import type { Cue } from '../cutscene/captions.ts';
 import { play, haptic } from '../audio/audio.ts';
 import { Button } from '../ui/Button.tsx';
 import { Gauge } from '../ui/Gauge.tsx';
@@ -17,7 +17,7 @@ import { Splashdown } from './Splashdown.tsx';
 export function StatusTracker({ phase, failedAt, flash, glow }: { phase: number; failedAt: number | null; flash: boolean; glow: boolean }) {
   return (
     <ol
-      className={`sticker-sm flex flex-wrap items-center justify-center gap-1 bg-panel/90 px-2 py-1.5 text-xs font-bold backdrop-blur transition md:gap-2 md:text-sm ${flash ? 'bg-danger/90' : ''} ${glow ? 'shadow-[0_0_30px_8px_rgba(92,225,255,0.55)]' : ''}`}
+      className={`sticker-sm flex flex-wrap items-center justify-center gap-1 bg-panel/90 px-2 py-1.5 text-xs font-bold transition-colors md:gap-2 md:text-sm ${flash ? 'bg-danger/90' : ''} ${glow ? 'shadow-[0_0_30px_8px_rgba(92,225,255,0.55)]' : ''}`}
       aria-label="Mission status"
       data-testid="tracker"
     >
@@ -40,12 +40,6 @@ export function StatusTracker({ phase, failedAt, flash, glow }: { phase: number;
       })}
     </ol>
   );
-}
-
-function phaseForSegment(seg: Segment): number {
-  if (seg.clip === 'launch' || seg.clip === 'explosion') return 0;
-  if (seg.clip === 'planet') return 2;
-  return seg.mirror ? 4 : 1;
 }
 
 export function Launch() {
@@ -98,7 +92,7 @@ export function Launch() {
     return () => window.removeEventListener('keydown', onKey);
   }, [stage]);
 
-  const onSegment = useCallback((_i: number, seg: Segment) => setPhase(phaseForSegment(seg)), []);
+  const onPhase = useCallback((ph: number) => setPhase(ph), []);
   const onCue = useCallback((cue: Cue) => {
     if (cue.type === 'warning') {
       setSpike(true);
@@ -131,9 +125,8 @@ export function Launch() {
 
   return (
     <div className="absolute inset-0 bg-black" data-testid="launch-screen" data-outcome={plan.outcome}>
-      {stage !== 'countdown' && (
-        <CutscenePlayer plan={plan} calm={calm} onCue={onCue} onSegment={onSegment} onEnd={onEnd} onSkip={() => go('report')} />
-      )}
+      {/* Mounted during the countdown so the video is loaded and ready at GO. */}
+      <CutscenePlayer plan={plan} calm={calm} playing={stage !== 'countdown'} onCue={onCue} onPhase={onPhase} onEnd={onEnd} onSkip={() => go('report')} />
 
       <div className="pointer-events-none absolute inset-x-0 top-3 z-30 flex justify-center px-3">
         <StatusTracker phase={phase} failedAt={failedAt} flash={flash} glow={glow} />

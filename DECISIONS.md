@@ -1,6 +1,6 @@
 # Decisions
 
-Choices made while building STARBOUND from the brief (`CLAUDE_CODE_PROMPT.md`), and why. Where the brief
+Choices made while building Orbital Uprise (first called STARBOUND) from the brief (`CLAUDE_CODE_PROMPT.md`), and why. Where the brief
 could not be followed literally, the reason and the replacement are recorded here.
 
 ## Plan (as built)
@@ -27,6 +27,43 @@ The repo held "Rocket Builder" v2. The team chose to replace it with this brief.
   (lanczos to 1920×1080, x264 CRF 21, AAC 192 kb/s, faststart). Frame counts match `cutscenes.json` exactly
   (45 / 113 / 132 / 29). Size: shaken set 2.7 MB, calm set 2.0 MB (4.7 MB total; a player only loads one set).
 - 4K masters are not in the build (source material, like `masters_4k/`).
+
+## Renamed to Orbital Uprise
+
+The team renamed the game. Saved runs, settings and the device leaderboard move automatically from the old
+`starbound.*` storage keys to `orbitaluprise.*` (`src/store/migrate.ts`).
+
+## Cutscenes: one pre-rendered file per outcome (replaces live clip-stitching)
+
+The first version stitched the clips together live in the browser with two stacked `<video>` elements
+(double-buffering, as the brief suggested). The team reported the cutscenes as buggy, and swapping videos
+mid-sequence is fragile across browsers. Safari also blocks sound when `play()` happens 10 s after the LAUNCH tap.
+Now:
+
+- `npm run build-cutscenes` renders each of the 7 outcome sequences (brief §6.2) into **one** 1280×720 H.264 file
+  (CRF 23, `-tune animation`, AAC 128 kb/s, faststart), with mirroring, `stopAt` cuts and a 39-frame hold
+  for the "Mission accomplished" stamp built in. The sequences come from `planCutscene()`, so they always
+  match the engine.
+- The player uses one shared `<video>`. The LAUNCH tap loads it and briefly plays and pauses it, which unlocks
+  sound in Safari. It buffers during the 10 s countdown. Cues and captions fire from absolute times; React state
+  only changes when something visible changes.
+- Check: every sequence, shaken and calm, plays with the correct phases, zero black frames, and zero frames
+  where the video wasn't ready. At 4× CPU slowdown, the success sequence dropped 0 of 343 video frames
+  (the old player dropped 6 of 255).
+- Size: 5.0 MB (shaken) + 4.4 MB (calm) on disk, over the brief's 5 MB total. A player only ever downloads one
+  file per launch (0.15–1.2 MB), so this trades disk size for reliable playback.
+- 720p instead of 1080p: the team asked for smooth playback over resolution; it halves decoding work.
+
+## Smoother menus
+
+- Starfield: each layer is painted once into an image and slid by CSS in whole-pixel steps (compositor only).
+  It was previously repainted every frame. It also hadn't been visible at all, because the body background covered it.
+- Planet art: shading, glow and outline are drawn once; each frame only slides the surface (24 fps, paused
+  when off-screen).
+- Screen transitions, title letters and Cass use transform/opacity CSS animations instead of clip-path and
+  per-letter JS springs. The blur behind the in-flight status bar was removed.
+- Measured at 4× CPU slowdown in headless Chromium: title 56→60 fps, destinations 46→50 fps, workshop 56→55 fps,
+  now with the starfield actually visible.
 
 ## Physics: where the brief's numbers were changed (and why)
 
@@ -107,5 +144,6 @@ Each fun fact was checked by loading the NASA page and quoting the supporting se
 - No NASA logos or insignia. Cass is an original SVG character.
 - The `frontend-design` skill was not available in this environment; the look follows the brief's
   "sticker-book mission control" direction directly.
+- Safari/WebKit was not tested directly (only Chromium is installed in the build environment).
 - Lighthouse was not run (blocked by this environment's permissions). Local paint timings: FCP ≈ 0.45 s,
   LCP ≈ 0.63 s on the title screen; leaderboard, run summary, debug and confetti are lazy-loaded.

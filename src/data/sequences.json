@@ -1,0 +1,546 @@
+{
+  "width": 1280,
+  "height": 720,
+  "fps": 24,
+  "holdSeconds": 1.625,
+  "sequences": {
+    "no_thrust": {
+      "file": "cutscenes/seq/no_thrust.mp4",
+      "calmFile": "cutscenes/seq/calm/no_thrust.mp4",
+      "poster": "cutscenes/seq/no_thrust_poster.jpg",
+      "calmPoster": "cutscenes/seq/calm/no_thrust_poster.jpg",
+      "duration": 1.2,
+      "bytes": 171271,
+      "calmBytes": 146628,
+      "timeline": [
+        {
+          "clip": "launch",
+          "start": 0,
+          "end": 1.2
+        }
+      ],
+      "cues": [
+        {
+          "t": 0.08,
+          "type": "ignition",
+          "strength": 0.6
+        },
+        {
+          "t": 1,
+          "type": "rumble",
+          "strength": 0.8,
+          "until": 1.2
+        }
+      ],
+      "captions": [
+        {
+          "t": 0,
+          "text": "[countdown hiss]"
+        },
+        {
+          "t": 0.08,
+          "text": "[engines ignite]"
+        },
+        {
+          "t": 0.7,
+          "text": "[engines roar]"
+        }
+      ]
+    },
+    "explosion": {
+      "file": "cutscenes/seq/explosion.mp4",
+      "calmFile": "cutscenes/seq/calm/explosion.mp4",
+      "poster": "cutscenes/seq/explosion_poster.jpg",
+      "calmPoster": "cutscenes/seq/calm/explosion_poster.jpg",
+      "duration": 7.375,
+      "bytes": 790988,
+      "calmBytes": 636247,
+      "timeline": [
+        {
+          "clip": "launch",
+          "start": 0,
+          "end": 1.875
+        },
+        {
+          "clip": "explosion",
+          "start": 1.875,
+          "end": 7.375
+        }
+      ],
+      "cues": [
+        {
+          "t": 0.08,
+          "type": "ignition",
+          "strength": 0.6
+        },
+        {
+          "t": 1,
+          "type": "rumble",
+          "strength": 0.8,
+          "until": 1.875
+        },
+        {
+          "t": 5.325,
+          "type": "warning",
+          "strength": 0.3
+        },
+        {
+          "t": 6.208,
+          "type": "spark",
+          "strength": 0.5
+        },
+        {
+          "t": 6.292,
+          "type": "explosion",
+          "strength": 1
+        }
+      ],
+      "captions": [
+        {
+          "t": 0,
+          "text": "[countdown hiss]"
+        },
+        {
+          "t": 0.08,
+          "text": "[engines ignite]"
+        },
+        {
+          "t": 0.7,
+          "text": "[engines roar]"
+        },
+        {
+          "t": 1.875,
+          "text": "[rumbling climb]"
+        },
+        {
+          "t": 3.275,
+          "text": "[engines hum]"
+        },
+        {
+          "t": 5.325,
+          "text": "[alarm beeping]"
+        },
+        {
+          "t": 6.208,
+          "text": "[spark]"
+        },
+        {
+          "t": 6.292,
+          "text": "[explosion]"
+        }
+      ]
+    },
+    "out_of_fuel": {
+      "file": "cutscenes/seq/out_of_fuel.mp4",
+      "calmFile": "cutscenes/seq/calm/out_of_fuel.mp4",
+      "poster": "cutscenes/seq/out_of_fuel_poster.jpg",
+      "calmPoster": "cutscenes/seq/calm/out_of_fuel_poster.jpg",
+      "duration": 5.375,
+      "bytes": 569460,
+      "calmBytes": 496043,
+      "timeline": [
+        {
+          "clip": "launch",
+          "start": 0,
+          "end": 1.875
+        },
+        {
+          "clip": "cruising",
+          "start": 1.875,
+          "end": 5.375
+        }
+      ],
+      "cues": [
+        {
+          "t": 0.08,
+          "type": "ignition",
+          "strength": 0.6
+        },
+        {
+          "t": 1,
+          "type": "rumble",
+          "strength": 0.8,
+          "until": 1.875
+        },
+        {
+          "t": 1.875,
+          "type": "rumble",
+          "strength": 0.6,
+          "until": 3.075
+        }
+      ],
+      "captions": [
+        {
+          "t": 0,
+          "text": "[countdown hiss]"
+        },
+        {
+          "t": 0.08,
+          "text": "[engines ignite]"
+        },
+        {
+          "t": 0.7,
+          "text": "[engines roar]"
+        },
+        {
+          "t": 1.875,
+          "text": "[rumbling climb]"
+        },
+        {
+          "t": 3.275,
+          "text": "[engines hum through space]"
+        }
+      ]
+    },
+    "signal_lost": {
+      "file": "cutscenes/seq/signal_lost.mp4",
+      "calmFile": "cutscenes/seq/calm/signal_lost.mp4",
+      "poster": "cutscenes/seq/signal_lost_poster.jpg",
+      "calmPoster": "cutscenes/seq/calm/signal_lost_poster.jpg",
+      "duration": 6.583,
+      "bytes": 626055,
+      "calmBytes": 548271,
+      "timeline": [
+        {
+          "clip": "launch",
+          "start": 0,
+          "end": 1.875
+        },
+        {
+          "clip": "cruising",
+          "start": 1.875,
+          "end": 6.583
+        }
+      ],
+      "cues": [
+        {
+          "t": 0.08,
+          "type": "ignition",
+          "strength": 0.6
+        },
+        {
+          "t": 1,
+          "type": "rumble",
+          "strength": 0.8,
+          "until": 1.875
+        },
+        {
+          "t": 1.875,
+          "type": "rumble",
+          "strength": 0.6,
+          "until": 3.075
+        }
+      ],
+      "captions": [
+        {
+          "t": 0,
+          "text": "[countdown hiss]"
+        },
+        {
+          "t": 0.08,
+          "text": "[engines ignite]"
+        },
+        {
+          "t": 0.7,
+          "text": "[engines roar]"
+        },
+        {
+          "t": 1.875,
+          "text": "[rumbling climb]"
+        },
+        {
+          "t": 3.275,
+          "text": "[engines hum through space]"
+        }
+      ]
+    },
+    "planet_fail": {
+      "file": "cutscenes/seq/planet_fail.mp4",
+      "calmFile": "cutscenes/seq/calm/planet_fail.mp4",
+      "poster": "cutscenes/seq/planet_fail_poster.jpg",
+      "calmPoster": "cutscenes/seq/calm/planet_fail_poster.jpg",
+      "duration": 7.792,
+      "bytes": 730561,
+      "calmBytes": 647667,
+      "timeline": [
+        {
+          "clip": "launch",
+          "start": 0,
+          "end": 1.875
+        },
+        {
+          "clip": "cruising",
+          "start": 1.875,
+          "end": 6.583
+        },
+        {
+          "clip": "planet",
+          "start": 6.583,
+          "end": 7.792
+        }
+      ],
+      "cues": [
+        {
+          "t": 0.08,
+          "type": "ignition",
+          "strength": 0.6
+        },
+        {
+          "t": 1,
+          "type": "rumble",
+          "strength": 0.8,
+          "until": 1.875
+        },
+        {
+          "t": 1.875,
+          "type": "rumble",
+          "strength": 0.6,
+          "until": 3.075
+        },
+        {
+          "t": 7.133,
+          "type": "arrival_chime",
+          "strength": 0.2
+        }
+      ],
+      "captions": [
+        {
+          "t": 0,
+          "text": "[countdown hiss]"
+        },
+        {
+          "t": 0.08,
+          "text": "[engines ignite]"
+        },
+        {
+          "t": 0.7,
+          "text": "[engines roar]"
+        },
+        {
+          "t": 1.875,
+          "text": "[rumbling climb]"
+        },
+        {
+          "t": 3.275,
+          "text": "[engines hum through space]"
+        },
+        {
+          "t": 6.583,
+          "text": "[gliding towards the planet]"
+        },
+        {
+          "t": 7.133,
+          "text": "[arrival chime]"
+        }
+      ]
+    },
+    "return_fail": {
+      "file": "cutscenes/seq/return_fail.mp4",
+      "calmFile": "cutscenes/seq/calm/return_fail.mp4",
+      "poster": "cutscenes/seq/return_fail_poster.jpg",
+      "calmPoster": "cutscenes/seq/calm/return_fail_poster.jpg",
+      "duration": 12.5,
+      "bytes": 1097245,
+      "calmBytes": 975889,
+      "timeline": [
+        {
+          "clip": "launch",
+          "start": 0,
+          "end": 1.875
+        },
+        {
+          "clip": "cruising",
+          "start": 1.875,
+          "end": 6.583
+        },
+        {
+          "clip": "planet",
+          "start": 6.583,
+          "end": 7.792
+        },
+        {
+          "clip": "cruising",
+          "start": 7.792,
+          "end": 12.5,
+          "mirror": true,
+          "label": "Return journey"
+        }
+      ],
+      "cues": [
+        {
+          "t": 0.08,
+          "type": "ignition",
+          "strength": 0.6
+        },
+        {
+          "t": 1,
+          "type": "rumble",
+          "strength": 0.8,
+          "until": 1.875
+        },
+        {
+          "t": 1.875,
+          "type": "rumble",
+          "strength": 0.6,
+          "until": 3.075
+        },
+        {
+          "t": 7.133,
+          "type": "arrival_chime",
+          "strength": 0.2
+        },
+        {
+          "t": 7.792,
+          "type": "rumble",
+          "strength": 0.6,
+          "until": 8.992
+        }
+      ],
+      "captions": [
+        {
+          "t": 0,
+          "text": "[countdown hiss]"
+        },
+        {
+          "t": 0.08,
+          "text": "[engines ignite]"
+        },
+        {
+          "t": 0.7,
+          "text": "[engines roar]"
+        },
+        {
+          "t": 1.875,
+          "text": "[rumbling climb]"
+        },
+        {
+          "t": 3.275,
+          "text": "[engines hum through space]"
+        },
+        {
+          "t": 6.583,
+          "text": "[gliding towards the planet]"
+        },
+        {
+          "t": 7.133,
+          "text": "[arrival chime]"
+        },
+        {
+          "t": 7.792,
+          "text": "[rumbling climb]"
+        },
+        {
+          "t": 9.192,
+          "text": "[engines hum through space]"
+        }
+      ]
+    },
+    "success": {
+      "file": "cutscenes/seq/success.mp4",
+      "calmFile": "cutscenes/seq/calm/success.mp4",
+      "poster": "cutscenes/seq/success_poster.jpg",
+      "calmPoster": "cutscenes/seq/calm/success_poster.jpg",
+      "duration": 14.125,
+      "bytes": 1185809,
+      "calmBytes": 1061716,
+      "timeline": [
+        {
+          "clip": "launch",
+          "start": 0,
+          "end": 1.875
+        },
+        {
+          "clip": "cruising",
+          "start": 1.875,
+          "end": 6.583
+        },
+        {
+          "clip": "planet",
+          "start": 6.583,
+          "end": 7.792
+        },
+        {
+          "clip": "planet",
+          "start": 7.792,
+          "end": 9.417,
+          "hold": true
+        },
+        {
+          "clip": "cruising",
+          "start": 9.417,
+          "end": 14.125,
+          "mirror": true,
+          "label": "Return journey"
+        }
+      ],
+      "cues": [
+        {
+          "t": 0.08,
+          "type": "ignition",
+          "strength": 0.6
+        },
+        {
+          "t": 1,
+          "type": "rumble",
+          "strength": 0.8,
+          "until": 1.875
+        },
+        {
+          "t": 1.875,
+          "type": "rumble",
+          "strength": 0.6,
+          "until": 3.075
+        },
+        {
+          "t": 7.133,
+          "type": "arrival_chime",
+          "strength": 0.2
+        },
+        {
+          "t": 9.417,
+          "type": "rumble",
+          "strength": 0.6,
+          "until": 10.617
+        }
+      ],
+      "captions": [
+        {
+          "t": 0,
+          "text": "[countdown hiss]"
+        },
+        {
+          "t": 0.08,
+          "text": "[engines ignite]"
+        },
+        {
+          "t": 0.7,
+          "text": "[engines roar]"
+        },
+        {
+          "t": 1.875,
+          "text": "[rumbling climb]"
+        },
+        {
+          "t": 3.275,
+          "text": "[engines hum through space]"
+        },
+        {
+          "t": 6.583,
+          "text": "[gliding towards the planet]"
+        },
+        {
+          "t": 7.133,
+          "text": "[arrival chime]"
+        },
+        {
+          "t": 9.417,
+          "text": "[rumbling climb]"
+        },
+        {
+          "t": 10.817,
+          "text": "[engines hum through space]"
+        }
+      ]
+    }
+  }
+}

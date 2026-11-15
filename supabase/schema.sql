@@ -1,4 +1,4 @@
--- STARBOUND leaderboard. Run this once in the Supabase SQL editor (Project → SQL → New query).
+-- Orbital Uprise leaderboard. Run this once in the Supabase SQL editor (Project → SQL → New query).
 create extension if not exists pgcrypto;
 
 create table if not exists public.leaderboard (

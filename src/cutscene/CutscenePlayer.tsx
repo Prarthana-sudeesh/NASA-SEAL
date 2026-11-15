@@ -1,215 +1,143 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { CutscenePlan, Segment } from '../engine/cutscenes.ts';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { CutscenePlan, Outcome } from '../engine/cutscenes.ts';
 import { duckMusic, haptic, play as playSfx } from '../audio/audio.ts';
 import { useSettings } from '../store/settings.ts';
-import { CAPTIONS, HAPTICS, clipSrc, loadManifest, posterSrc, type Cue, type Manifest } from './manifest.ts';
+import { HAPTICS, type Cue } from './captions.ts';
+import { SEQUENCES, phaseOf, sequencePoster, sequenceSrc, videoHost } from './sequences.ts';
 import { TvStatic } from './TvStatic.tsx';
 
 export interface CutscenePlayerProps {
   plan: CutscenePlan;
   calm: boolean;
-  onCue?: (cue: Cue, segIndex: number) => void;
-  onSegment?: (segIndex: number, seg: Segment) => void;
-  /** Playback reached the end (after any end effect has started). */
+  /** false = load and wait (during the countdown); true = play. */
+  playing: boolean;
+  onCue?: (cue: Cue) => void;
+  onPhase?: (phase: number) => void;
   onEnd: () => void;
   onSkip: () => void;
 }
 
-const SWAP_POLL_MS = 40;
-
 /**
- * Plays a sequence of clips seamlessly with two stacked <video> elements (double buffer): while one
- * plays, the next is loaded and paused on its first frame; it is only brought to the front once it is
- * actually playing, so the previous clip's last frame stays visible and there is never a black flash.
+ * Plays one pre-rendered sequence file (scripts/build-cutscenes.ts). All clips, the mirrored return
+ * journey and the success hold are already joined inside the file, so playback is a single video:
+ * no swapping between clips, no black frames, unbroken sound.
  */
-export function CutscenePlayer({ plan, calm, onCue, onSegment, onEnd, onSkip }: CutscenePlayerProps) {
-  const vids = [useRef<HTMLVideoElement>(null), useRef<HTMLVideoElement>(null)];
-  const [front, setFront] = useState(0);
-  const [segIndex, setSegIndex] = useState(0);
-  const [manifest, setManifest] = useState<Manifest | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [needsTap, setNeedsTap] = useState(false);
+export function CutscenePlayer({ plan, calm, playing, onCue, onPhase, onEnd, onSkip }: CutscenePlayerProps) {
+  const outcome: Outcome = plan.outcome;
+  const seq = SEQUENCES[outcome];
+  const box = useRef<HTMLDivElement>(null);
   const [caption, setCaption] = useState('');
-  const [stamp, setStamp] = useState<string | null>(null);
+  const [label, setLabel] = useState<string | undefined>();
+  const [stamp, setStamp] = useState(false);
   const [ended, setEnded] = useState(false);
-  const [mirrored, setMirrored] = useState<[boolean, boolean]>([false, false]);
-  const segRef = useRef(0);
-  const firedCues = useRef(new Set<string>());
-  const endedRef = useRef(false);
-  const mutedFallback = useRef(false);
+  const [needsTap, setNeedsTap] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const muted = useSettings((s) => s.muted);
-  const master = useSettings((s) => s.master);
-  const sfxVol = useSettings((s) => s.sfx);
+  const volume = useSettings((s) => Math.max(0, Math.min(1, s.master * s.sfx)));
+  const cb = useRef({ onCue, onPhase, onEnd });
+  cb.current = { onCue, onPhase, onEnd };
 
-  const segs = plan.segments;
+  // Attach the shared video element and load this sequence.
+  useLayoutEffect(() => {
+    const v = videoHost();
+    v.className = 'absolute inset-0 h-full w-full object-contain';
+    v.style.transform = '';
+    const src = sequenceSrc(outcome, calm);
+    if (!v.src.endsWith(src.replace(/^\.\//, ''))) {
+      v.src = src;
+      v.poster = sequencePoster(outcome, calm);
+      v.load();
+    }
+    v.currentTime = 0;
+    box.current?.appendChild(v);
+    const onErr = () => setError('The cutscene video could not be loaded.');
+    v.addEventListener('error', onErr);
+    return () => {
+      v.removeEventListener('error', onErr);
+      v.pause();
+      v.remove();
+    };
+  }, [outcome, calm]);
 
-  // Duck the ambient music while the cutscene plays.
+  useEffect(() => {
+    const v = videoHost();
+    v.volume = volume;
+    v.muted = muted || needsTap;
+  }, [muted, volume, needsTap]);
+
   useEffect(() => {
     duckMusic(true);
     return () => duckMusic(false);
   }, []);
 
+  // Play + event loop. Only touches React state when something visible changes.
   useEffect(() => {
-    loadManifest().then(setManifest, (e: Error) => setError(e.message));
-  }, []);
-
-  // Keep the video volume in line with the SFX bus.
-  useEffect(() => {
-    for (const v of vids) {
-      if (!v.current) continue;
-      v.current.volume = Math.max(0, Math.min(1, master * sfxVol));
-      v.current.muted = muted || mutedFallback.current;
-    }
-  });
-
-  const prepare = useCallback(
-    (slot: number, seg: Segment | undefined) => {
-      const el = vids[slot].current;
-      if (!el || !seg || !manifest) return;
-      const src = clipSrc(manifest, seg.clip, calm);
-      if (!el.src.endsWith(src.replace(/^\.\//, ''))) {
-        el.src = src;
-        el.poster = posterSrc(manifest, seg.clip, calm);
-        el.load();
-      } else {
-        el.currentTime = 0;
-      }
-      el.pause();
-      setMirrored((m) => {
-        const n: [boolean, boolean] = [...m];
-        n[slot] = !!seg.mirror;
-        return n;
-      });
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [manifest, calm],
-  );
-
-  const tryPlay = useCallback(async (el: HTMLVideoElement) => {
-    el.muted = useSettings.getState().muted || mutedFallback.current;
-    try {
-      await el.play();
-    } catch {
-      // Autoplay with sound rejected: retry muted and offer "Tap for sound".
-      mutedFallback.current = true;
-      el.muted = true;
-      setNeedsTap(true);
-      try {
-        await el.play();
-      } catch {
-        /* still blocked; the poster frame stays visible */
-      }
-    }
-  }, []);
-
-  const finish = useCallback(() => {
-    if (endedRef.current) return;
-    endedRef.current = true;
-    setEnded(true);
-    setCaption('');
-    onEnd();
-  }, [onEnd]);
-
-  /** Bring segment i to the front: play it, swap when it is really playing, preload i+1 behind. */
-  const startSegment = useCallback(
-    (i: number) => {
-      const slot = i % 2;
-      const el = vids[slot].current;
-      if (!el) return;
-      segRef.current = i;
-      setSegIndex(i);
-      onSegment?.(i, segs[i]);
-      let swapped = false;
-      const swap = () => {
-        if (swapped) return;
-        swapped = true;
-        setFront(slot);
-        // Load the following segment into the other buffer.
-        prepare(1 - slot, segs[i + 1]);
-      };
-      el.addEventListener('playing', () => (el.readyState >= 2 ? swap() : undefined), { once: true });
-      // Fallback in case 'playing' is missed: swap as soon as a frame is decoded.
-      const started = performance.now();
-      const poll = () => {
-        if (swapped) return;
-        if (el.readyState >= 2 || performance.now() - started > 2000) swap();
-        else setTimeout(poll, SWAP_POLL_MS);
-      };
-      setTimeout(poll, SWAP_POLL_MS);
-      void tryPlay(el);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [segs, prepare, tryPlay, onSegment],
-  );
-
-  // Kick off once the manifest is in.
-  useEffect(() => {
-    if (!manifest) return;
-    endedRef.current = false;
-    firedCues.current.clear();
-    prepare(0, segs[0]);
-    prepare(1, segs[1]);
-    const t = setTimeout(() => startSegment(0), 30);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [manifest, plan]);
-
-  // Handle 'ended' on the front video.
-  const onEnded = useCallback(
-    (slot: number) => {
-      const i = segRef.current;
-      if (slot !== i % 2 || endedRef.current) return;
-      const next = i + 1;
-      if (next >= segs.length) return finish();
-      // Success: stamp "Mission accomplished" between arrival and the return journey.
-      if (plan.midStamp && segs[i].clip === 'planet') {
-        setStamp(plan.midStamp);
-        playSfx('part_snap');
-        setTimeout(() => {
-          setStamp(null);
-          startSegment(next);
-        }, 1900);
-        return;
-      }
-      startSegment(next);
-    },
-    [segs, plan.midStamp, startSegment, finish],
-  );
-
-  // Frame loop: cues, captions, stopAt.
-  useEffect(() => {
-    if (!manifest) return;
+    if (!playing) return;
+    const v = videoHost();
+    let cueIdx = 0;
+    let capText = '';
+    let entryIdx = -1;
+    let done = false;
     let raf = 0;
-    const tick = () => {
-      const i = segRef.current;
-      const seg = segs[i];
-      const el = vids[i % 2].current;
-      if (el && seg && !endedRef.current) {
-        const t = el.currentTime;
-        for (const cue of manifest[seg.clip].cues) {
-          const key = `${i}:${cue.type}:${cue.t}`;
-          if (t >= cue.t && !firedCues.current.has(key)) {
-            firedCues.current.add(key);
-            if (!calm || cue.type !== 'rumble') haptic(HAPTICS[cue.type]);
-            onCue?.(cue, i);
-          }
-        }
-        const caps = CAPTIONS[seg.clip].filter((c) => t >= c.t);
-        setCaption(caps.length ? caps[caps.length - 1].text : '');
-        if (seg.stopAt !== undefined && t >= seg.stopAt) {
-          el.pause();
-          finish();
-        }
-      }
-      raf = requestAnimationFrame(tick);
+    const finish = () => {
+      if (done) return;
+      done = true;
+      setEnded(true);
+      setCaption('');
+      setLabel(undefined);
+      setStamp(false);
+      cb.current.onEnd();
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [manifest, segs, calm, onCue, finish]);
+    const step = () => {
+      const t = v.currentTime;
+      while (cueIdx < seq.cues.length && t >= seq.cues[cueIdx].t) {
+        const c = seq.cues[cueIdx++];
+        if (!calm || c.type !== 'rumble') haptic(HAPTICS[c.type]);
+        cb.current.onCue?.(c);
+      }
+      let cap = '';
+      for (const c of seq.captions) if (t >= c.t) cap = c.text;
+      if (cap !== capText) {
+        capText = cap;
+        setCaption(cap);
+      }
+      const i = seq.timeline.findIndex((e) => t >= e.start && t < e.end);
+      if (i !== -1 && i !== entryIdx) {
+        entryIdx = i;
+        const e = seq.timeline[i];
+        setLabel(e.label);
+        setStamp(!!e.hold && !!plan.midStamp);
+        if (e.hold && plan.midStamp) playSfx('part_snap');
+        cb.current.onPhase?.(phaseOf(e));
+      }
+    };
+    const loop = () => {
+      step();
+      if (!done) raf = requestAnimationFrame(loop);
+    };
+    const onEnded = () => {
+      step();
+      finish();
+    };
+    v.addEventListener('ended', onEnded);
+    v.currentTime = 0;
+    v.muted = useSettings.getState().muted;
+    v.play().catch(() => {
+      // Sound blocked by the browser: play muted and offer "Tap for sound".
+      setNeedsTap(true);
+      v.muted = true;
+      v.play().catch(() => setError('Your browser blocked the video. Tap Skip to see the report.'));
+    });
+    raf = requestAnimationFrame(loop);
+    return () => {
+      cancelAnimationFrame(raf);
+      v.removeEventListener('ended', onEnded);
+    };
+  }, [playing, seq, calm, plan.midStamp]);
 
-  // Skip: Esc or Space.
+  // Skip: Esc or Space (layout effect so a fast key press is never lost).
   useLayoutEffect(() => {
+    if (!playing) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' || e.key === ' ') {
         e.preventDefault();
@@ -218,55 +146,35 @@ export function CutscenePlayer({ plan, calm, onCue, onSegment, onEnd, onSkip }: 
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onSkip]);
+  }, [playing, onSkip]);
 
   const unmute = () => {
-    mutedFallback.current = false;
     setNeedsTap(false);
-    for (const v of vids) if (v.current) v.current.muted = useSettings.getState().muted;
+    const v = videoHost();
+    v.muted = useSettings.getState().muted;
+    void v.play().catch(() => {});
   };
 
-  const seg = segs[segIndex];
   const effectClass = ended ? (plan.endEffect === 'sputter' ? 'fx-sputter' : plan.endEffect === 'freeze-zoom' ? 'fx-freeze-zoom' : '') : '';
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-black" data-testid="cutscene" data-segment={segIndex} data-ended={ended}>
-      <div className={`absolute inset-0 ${effectClass}`}>
-        {[0, 1].map((slot) => (
-          <video
-            key={slot}
-            ref={vids[slot]}
-            className="absolute inset-0 h-full w-full object-contain"
-            style={{
-              zIndex: front === slot ? 2 : 1,
-              transform: mirrored[slot] ? 'scaleX(-1)' : undefined,
-            }}
-            playsInline
-            preload="auto"
-            aria-hidden="true"
-            onEnded={() => onEnded(slot)}
-            onError={() => setError('A cutscene clip failed to load.')}
-          />
-        ))}
-      </div>
+    <div className="absolute inset-0 overflow-hidden bg-black" data-testid="cutscene" data-ended={ended} data-outcome={outcome}>
+      <div ref={box} className={`absolute inset-0 ${effectClass}`} />
 
       {ended && plan.endEffect === 'static' && <TvStatic calm={calm} />}
 
-      {seg?.label && !ended && (
-        <div className="absolute left-1/2 top-24 z-10 -translate-x-1/2 rounded-full border-[3px] border-ink bg-cyan px-5 py-1 font-display text-lg font-bold text-ink shadow-[3px_3px_0_#000]">
-          {seg.label}
+      {label && !ended && (
+        <div className="absolute left-1/2 top-20 z-10 -translate-x-1/2 rounded-full border-[3px] border-ink bg-cyan px-5 py-1 font-display text-lg font-bold text-ink shadow-[3px_3px_0_#000]">
+          {label}
         </div>
       )}
 
-      {stamp && (
-        <div className="absolute inset-0 z-20 grid place-items-center">
-          <div className="sticker -rotate-3 bg-plume px-8 py-5 text-center font-display text-3xl font-bold text-ink md:text-5xl">
-            {stamp}
-          </div>
+      {stamp && plan.midStamp && (
+        <div className="absolute inset-0 z-20 grid place-items-center p-4">
+          <div className="stamp-in sticker -rotate-3 bg-plume px-8 py-5 text-center font-display text-3xl font-bold text-ink md:text-5xl">{plan.midStamp}</div>
         </div>
       )}
 
-      {/* Caption track */}
       {caption && (
         <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 -translate-x-1/2 rounded-lg bg-black/75 px-4 py-1.5 font-mono text-base text-cream md:text-lg" aria-hidden="true">
           {caption}
@@ -282,7 +190,7 @@ export function CutscenePlayer({ plan, calm, onCue, onSegment, onEnd, onSkip }: 
             🔊 Tap for sound
           </button>
         )}
-        {!ended && (
+        {playing && !ended && (
           <button className="btn bg-cream px-5 py-2 text-ink" onClick={onSkip} aria-keyshortcuts="Escape Space">
             Skip ⏭
           </button>

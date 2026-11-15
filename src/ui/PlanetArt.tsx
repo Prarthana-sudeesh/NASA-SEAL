@@ -132,44 +132,86 @@ export function PlanetArt({ planet, size = 160, spin = true, label = true }: { p
     }
     t.globalAlpha = 1;
 
-    let off = rand() * W;
-    let raf = 0;
-    let last = performance.now();
-    const draw = (now: number) => {
-      const dt = (now - last) / 1000;
-      last = now;
-      if (spin && !calm) off = (off + dt * r * 0.12) % (W / 2);
-      ctx.clearRect(0, 0, S, S);
-      if (pal.glow) {
-        const g = ctx.createRadialGradient(cx, cy, r * 0.9, cx, cy, r * 1.45);
-        g.addColorStop(0, pal.glow);
-        g.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, S, S);
-      }
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(tex, -off, cy - r, W, H);
-      ctx.drawImage(tex, -off + W / 2 * 2, cy - r, W, H);
-      // terminator shading + rim light
-      const sh = ctx.createRadialGradient(cx - r * 0.45, cy - r * 0.45, r * 0.2, cx, cy, r * 1.05);
+    // Static layers are drawn once: the glow behind, and the shading + outline on top.
+    const layer = () => {
+      const l = document.createElement('canvas');
+      l.width = S * dpr;
+      l.height = S * dpr;
+      const g = l.getContext('2d')!;
+      g.scale(dpr, dpr);
+      return { l, g };
+    };
+    const back = layer();
+    if (pal.glow) {
+      const g = back.g.createRadialGradient(cx, cy, r * 0.9, cx, cy, r * 1.45);
+      g.addColorStop(0, pal.glow);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      back.g.fillStyle = g;
+      back.g.fillRect(0, 0, S, S);
+    }
+    const front = layer();
+    {
+      const g = front.g;
+      g.save();
+      g.beginPath();
+      g.arc(cx, cy, r, 0, Math.PI * 2);
+      g.clip();
+      const sh = g.createRadialGradient(cx - r * 0.45, cy - r * 0.45, r * 0.2, cx, cy, r * 1.05);
       sh.addColorStop(0, 'rgba(255,255,255,0.18)');
       sh.addColorStop(0.55, 'rgba(0,0,0,0)');
       sh.addColorStop(1, 'rgba(5,7,15,0.62)');
-      ctx.fillStyle = sh;
-      ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-      ctx.restore();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#05070F';
+      g.fillStyle = sh;
+      g.fillRect(cx - r, cy - r, r * 2, r * 2);
+      g.restore();
+      g.lineWidth = 3;
+      g.strokeStyle = '#05070F';
+      g.beginPath();
+      g.arc(cx, cy, r, 0, Math.PI * 2);
+      g.stroke();
+    }
+
+    let off = rand() * (W / 2);
+    let raf = 0;
+    let last = performance.now();
+    let acc = 0;
+    let visible = true;
+    const animate = spin && !calm;
+    const paint = () => {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.drawImage(back.l, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.stroke();
-      if (spin && !calm) raf = requestAnimationFrame(draw);
+      ctx.arc(cx, cy, r - 0.5, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(tex, -off, cy - r, W, H);
+      ctx.drawImage(tex, -off + W / 2, cy - r, W, H);
+      ctx.restore();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(front.l, 0, 0);
     };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+    const draw = (now: number) => {
+      raf = requestAnimationFrame(draw);
+      const dt = Math.min(0.1, (now - last) / 1000);
+      last = now;
+      acc += dt;
+      if (acc < 1 / 24 || !visible || document.hidden) return; // a slow spin needs ~24 fps
+      off = (off + acc * r * 0.12) % (W / 2);
+      acc = 0;
+      paint();
+    };
+    paint();
+    let io: IntersectionObserver | null = null;
+    if (animate) {
+      raf = requestAnimationFrame(draw);
+      io = new IntersectionObserver(([e]) => (visible = e.isIntersecting));
+      io.observe(c);
+    }
+    return () => {
+      cancelAnimationFrame(raf);
+      io?.disconnect();
+    };
   }, [planet, size, px, spin, calm]);
 
   return (
