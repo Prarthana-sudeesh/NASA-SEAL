@@ -1,3 +1,4 @@
+import { flyThroughHazards } from './hazards.ts';
 import { test, expect } from '@playwright/test';
 
 // Regression: on a slow connection the LAUNCH-tap "prime" resolved after the cutscene had started and
@@ -45,6 +46,7 @@ test.describe('cutscenes on a slow connection', () => {
     await expect(page.getByTestId('countdown')).toBeVisible();
     await page.getByText('Skip countdown').click();
     // One tank can't reach orbit: the "Out of fuel" sequence must play through to its overlay.
+    await flyThroughHazards(page, page.getByTestId('overlay'));
     await expect(page.getByTestId('overlay')).toHaveText('Out of fuel', { timeout: 40_000 });
   });
 });

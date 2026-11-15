@@ -10,6 +10,7 @@ import { Button } from '../ui/Button.tsx';
 import { Card, CountUp, ExtLink, Redirect } from '../ui/bits.tsx';
 import { CassSays } from '../ui/Cass.tsx';
 import { play } from '../audio/audio.ts';
+import { HAZARDS } from '../hazards/hazards.ts';
 
 function ScoreLines({ r }: { r: MissionResult }) {
   const calm = useCalm();
@@ -155,6 +156,32 @@ export function Report() {
         <Card tiltKey="score" as="section" className="p-5">
           <h2 className="mb-3 font-display text-2xl text-plume">Score</h2>
           <ScoreLines r={r} />
+          {!!last.hazards?.length && (
+            <div className="mt-4 rounded-xl bg-space/70 p-3" data-testid="hazard-summary">
+              <p className="font-display text-lg text-cyan">Space hazards</p>
+              <ul className="mt-1 space-y-0.5">
+                {last.hazards.map((h, i) => (
+                  <li key={i} className="flex justify-between gap-2">
+                    <span>
+                      {HAZARDS[h.id].icon} {HAZARDS[h.id].title.replace(/!$/, '')} <span className="text-sm text-muted">({h.mode === 'quiz' ? 'quiz' : 'mini-game'})</span>
+                    </span>
+                    <span className={`font-bold ${h.won ? 'text-go' : 'text-danger'}`}>{h.won ? 'Cleared' : 'Missed'}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 flex justify-between border-t-2 border-white/10 pt-2 font-mono">
+                <span>Hazard points</span>
+                <b className={(last.hazardPoints ?? 0) >= 0 ? 'text-go' : 'text-danger'}>
+                  {(last.hazardPoints ?? 0) >= 0 ? '+' : ''}
+                  {(last.hazardPoints ?? 0).toFixed(1)}
+                </b>
+              </p>
+              <p className="flex justify-between font-mono text-lg">
+                <span>Launch total</span>
+                <b className="text-plume">{last.score.toFixed(1)}</b>
+              </p>
+            </div>
+          )}
         </Card>
         <Card tiltKey="why" as="section" className="p-5">
           <h2 className="mb-3 font-display text-2xl text-cyan">Why it happened</h2>

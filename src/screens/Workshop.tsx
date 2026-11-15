@@ -339,8 +339,8 @@ export function Workshop() {
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="font-display text-sm font-bold uppercase tracking-[0.2em] text-cyan">Rocket workshop · {cfg.label}</p>
-          <h1 tabIndex={-1} className="font-display text-4xl font-bold outline-none">
+          <p className="font-display text-sm font-bold uppercase tracking-[0.2em] text-cyan [text-shadow:2px_2px_0_#05070F]">Rocket workshop · {cfg.label}</p>
+          <h1 tabIndex={-1} className="font-display text-4xl font-bold outline-none [text-shadow:3px_3px_0_#05070F]">
             Build for {planet.nickname} <span className="font-mono text-xl text-muted">{planet.officialName}</span>
           </h1>
         </div>
@@ -401,10 +401,12 @@ export function Workshop() {
         </section>
 
         {/* Blueprint */}
-        <section className="sticker blueprint relative flex min-w-0 flex-col gap-4 p-4 md:flex-row" aria-label="Rocket blueprint">
+        <section className="relative flex min-w-0 flex-col gap-4 rounded-2xl p-4 md:flex-row" aria-label="Rocket blueprint">
           <div className="flex min-w-0 flex-1 items-start justify-center py-2">
             <div className="md:sticky md:top-24">
-              <RocketArt design={design} crew={crew} height={600} />
+              <div className="drop-shadow-[0_10px_18px_rgba(0,0,0,0.45)]">
+                <RocketArt design={design} crew={crew} height={600} />
+              </div>
             </div>
           </div>
           <div className="flex w-full min-w-0 flex-col gap-2 md:w-[60%]">
