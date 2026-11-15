@@ -344,3 +344,17 @@ input[type='range'] {
   animation: shooting-star 11s linear infinite 3s;
   will-change: transform, opacity;
 }
+
+/* Twinkling pixel stars on the launch-site backdrop. */
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.twinkle {
+  animation: twinkle 3s ease-in-out infinite;
+}

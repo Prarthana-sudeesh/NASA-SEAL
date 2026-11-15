@@ -3,6 +3,7 @@ import { useSettings } from '../store/settings.ts';
 import { toggleMute, play } from '../audio/audio.ts';
 import { DIFFICULTIES } from '../engine/difficulty.ts';
 import { runAverage } from '../engine/score.ts';
+import { BadgeButton } from './Badges.tsx';
 
 function IconBtn({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -49,6 +50,7 @@ export function TopBar() {
         )}
       </div>
       <div className="pointer-events-auto flex gap-2">
+        <BadgeButton />
         <IconBtn label={muted ? 'Unmute (M)' : 'Mute (M)'} onClick={toggleMute}>
           {muted ? '🔇' : '🔊'}
         </IconBtn>

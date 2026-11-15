@@ -5,6 +5,8 @@ import { useCalm, useSettings } from './store/settings.ts';
 import { Starfield } from './ui/Starfield.tsx';
 import { TopBar } from './ui/TopBar.tsx';
 import { LiveRegion } from './ui/bits.tsx';
+import { LaunchPad } from './ui/LaunchSite.tsx';
+import { BadgeToast } from './ui/Badges.tsx';
 import { Title } from './screens/Title.tsx';
 import { Briefing } from './screens/Briefing.tsx';
 import { DifficultyScreen } from './screens/Difficulty.tsx';
@@ -61,7 +63,14 @@ export function App() {
 
   return (
     <>
-      {!fullBleed && <Starfield />}
+      {screen === 'workshop' ? (
+        // The workshop sits in front of the animated launch site at golden hour.
+        <div className="pointer-events-none fixed inset-0 -z-10" aria-hidden="true">
+          <LaunchPad />
+        </div>
+      ) : (
+        !fullBleed && <Starfield />
+      )}
       {!fullBleed && <TopBar />}
       <AnimatePresence mode="wait">
         <motion.main
@@ -77,6 +86,7 @@ export function App() {
           </Suspense>
         </motion.main>
       </AnimatePresence>
+      <BadgeToast />
       <LiveRegion />
       {isDebug() && (
         <Suspense fallback={null}>

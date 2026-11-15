@@ -5,6 +5,7 @@ import type { FailureCause } from '../engine/mission.ts';
 import type { Design } from '../engine/rocket.ts';
 import type { SlotId } from '../data/components.ts';
 import type { Outcome } from '../engine/cutscenes.ts';
+import type { HazardResult } from '../hazards/hazards.ts';
 
 export const LAUNCHES_PER_RUN = 10;
 
@@ -33,6 +34,9 @@ export interface Attempt {
   success: boolean;
   cause: FailureCause | null;
   at: string;
+  /** Space hazards met on the flight, and the points they added or took away (already in `score`). */
+  hazards?: HazardResult[];
+  hazardPoints?: number;
 }
 
 export interface GameState {
@@ -63,6 +67,8 @@ export interface GameState {
   setDesign: (d: Design) => void;
   setCrew: (n: number) => void;
   recordAttempt: (a: Omit<Attempt, 'n' | 'at'>) => Attempt;
+  /** Adds a flight's hazard results to the latest launch and adjusts its score. */
+  applyHazards: (results: HazardResult[], points: number) => void;
   newRun: () => void;
   resetAll: () => void;
   markSubmitted: (entryId: string, runKey: string) => void;
@@ -115,6 +121,14 @@ export const useGame = create<GameState>()(
         const attempt: Attempt = { ...a, n: get().attempts.length + 1, at: new Date().toISOString() };
         set({ attempts: [...get().attempts, attempt].slice(0, LAUNCHES_PER_RUN) });
         return attempt;
+      },
+      applyHazards: (results, points) => {
+        const attempts = [...get().attempts];
+        const last = attempts[attempts.length - 1];
+        if (!last || last.hazards) return;
+        const score = Math.max(0, Math.round((last.score + points) * 10) / 10);
+        attempts[attempts.length - 1] = { ...last, score, hazards: results, hazardPoints: Math.round((score - last.score) * 10) / 10 };
+        set({ attempts });
       },
       newRun: () => set({ attempts: [], planetId: null, submittedRunKey: null, screen: 'difficulty' }),
       resetAll: () => set({ ...fresh }),

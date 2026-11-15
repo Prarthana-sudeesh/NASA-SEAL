@@ -15,6 +15,9 @@ export interface CutscenePlayerProps {
   onPhase?: (phase: number) => void;
   onEnd: () => void;
   onSkip: () => void;
+  /** Pause the video when it reaches this time (s), e.g. for a space hazard. Clear or move it on to resume. */
+  holdAt?: number | null;
+  onHold?: () => void;
 }
 
 /**
@@ -22,7 +25,7 @@ export interface CutscenePlayerProps {
  * journey and the success hold are already joined inside the file, so playback is a single video:
  * no swapping between clips, no black frames, unbroken sound.
  */
-export function CutscenePlayer({ plan, calm, playing, onCue, onPhase, onEnd, onSkip }: CutscenePlayerProps) {
+export function CutscenePlayer({ plan, calm, playing, onCue, onPhase, onEnd, onSkip, holdAt = null, onHold }: CutscenePlayerProps) {
   const outcome: Outcome = plan.outcome;
   const seq = SEQUENCES[outcome];
   const box = useRef<HTMLDivElement>(null);
@@ -34,8 +37,23 @@ export function CutscenePlayer({ plan, calm, playing, onCue, onPhase, onEnd, onS
   const [error, setError] = useState<string | null>(null);
   const muted = useSettings((s) => s.muted);
   const volume = useSettings((s) => Math.max(0, Math.min(1, s.master * s.sfx)));
-  const cb = useRef({ onCue, onPhase, onEnd });
-  cb.current = { onCue, onPhase, onEnd };
+  const cb = useRef({ onCue, onPhase, onEnd, onHold });
+  cb.current = { onCue, onPhase, onEnd, onHold };
+  const holdRef = useRef<number | null>(holdAt);
+  holdRef.current = holdAt;
+  const [held, setHeld] = useState(false);
+  const heldRef = useRef(false);
+
+  // Resume when the hold point is cleared or moved past the current frame.
+  useEffect(() => {
+    if (!heldRef.current) return;
+    const v = videoHost();
+    if (holdAt === null || v.currentTime < holdAt - 0.01) {
+      heldRef.current = false;
+      setHeld(false);
+      void v.play().catch(() => {});
+    }
+  }, [holdAt]);
 
   // Attach the shared video element and load this sequence.
   useLayoutEffect(() => {
@@ -90,6 +108,13 @@ export function CutscenePlayer({ plan, calm, playing, onCue, onPhase, onEnd, onS
     };
     const step = () => {
       const t = v.currentTime;
+      const h = holdRef.current;
+      if (h !== null && !heldRef.current && t >= h) {
+        heldRef.current = true;
+        v.pause();
+        setHeld(true);
+        cb.current.onHold?.();
+      }
       while (cueIdx < seq.cues.length && t >= seq.cues[cueIdx].t) {
         const c = seq.cues[cueIdx++];
         if (!calm || c.type !== 'rumble') haptic(HAPTICS[c.type]);
@@ -138,7 +163,7 @@ export function CutscenePlayer({ plan, calm, playing, onCue, onPhase, onEnd, onS
 
   // Skip: Esc or Space (layout effect so a fast key press is never lost).
   useLayoutEffect(() => {
-    if (!playing) return;
+    if (!playing || held) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' || e.key === ' ') {
         e.preventDefault();
@@ -147,7 +172,7 @@ export function CutscenePlayer({ plan, calm, playing, onCue, onPhase, onEnd, onS
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [playing, onSkip]);
+  }, [playing, onSkip, held]);
 
   const unmute = () => {
     setNeedsTap(false);
@@ -191,7 +216,7 @@ export function CutscenePlayer({ plan, calm, playing, onCue, onPhase, onEnd, onS
             🔊 Tap for sound
           </button>
         )}
-        {playing && !ended && (
+        {playing && !ended && !held && (
           <button className="btn bg-cream px-5 py-2 text-ink" onClick={onSkip} aria-keyshortcuts="Escape Space">
             Skip ⏭
           </button>

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { flyThroughHazards } from './hazards.ts';
 
 async function buildGoodRocket(page: Page) {
   // Clear whatever is fitted, then build a rocket that wins Proxima Cen b at Cadet.
@@ -60,7 +61,7 @@ test('a full 10-launch Cadet run ends on the leaderboard', async ({ page }) => {
     if (n === 1) {
       // Watch the first launch all the way to the splashdown.
       await page.getByText('Skip countdown').click();
-      await expect(page.getByTestId('splashdown')).toBeVisible({ timeout: 40_000 });
+      await flyThroughHazards(page, page.getByTestId('splashdown'));
       await page.getByTestId('to-report').click();
     } else {
       await expect(page.getByTestId('countdown')).toBeVisible();
