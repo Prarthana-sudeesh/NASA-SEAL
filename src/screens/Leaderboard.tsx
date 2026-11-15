@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useGame } from '../store/game.ts';
+import { useGame, LAUNCHES_PER_RUN } from '../store/game.ts';
 import { getLeaderboard, type LeaderboardEntry } from '../services/leaderboard.ts';
 import { displayName } from '../services/names.ts';
 import type { Difficulty } from '../data/types.ts';
@@ -45,7 +45,7 @@ export default function Leaderboard() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <ScreenTitle kicker="Hall of engineers" title="Leaderboard">
-          Average score over a full run of 10 launches.
+          Average score over a full run of {LAUNCHES_PER_RUN} launches.
         </ScreenTitle>
         <div className="mb-6 flex items-center gap-3">
           {svc.kind === 'local' ? (
@@ -102,7 +102,7 @@ export default function Leaderboard() {
             <tr>
               <th className="px-4 py-3">Rank</th>
               <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Average score (10 launches)</th>
+              <th className="px-4 py-3">Average score ({LAUNCHES_PER_RUN} launches)</th>
               <th className="px-4 py-3">Difficulty</th>
               <th className="px-4 py-3">Date</th>
             </tr>

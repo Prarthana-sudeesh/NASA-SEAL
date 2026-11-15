@@ -251,7 +251,7 @@ export function hazardAlarm() {
   });
 }
 
-export type GameSfx = 'hit' | 'tap' | 'good' | 'miss' | 'win' | 'lose' | 'tick';
+export type GameSfx = 'hit' | 'tap' | 'good' | 'miss' | 'win' | 'lose' | 'tick' | 'splash';
 
 /** Small effects for the quizzes and mini-games. */
 export function gameSfx(name: GameSfx) {
@@ -276,6 +276,13 @@ export function gameSfx(name: GameSfx) {
         break;
       case 'lose':
         [392, 330, 262, 196].forEach((f, i) => tone(a, bus, { type: 'sawtooth', freq: f, at: i * 0.14, dur: 0.3, vol: 0.06 }));
+        break;
+      case 'splash':
+        // Deep plunge, a rush of white water, then droplets pattering back down.
+        burst(a, bus, { type: 'lowpass', freq: 900, to: 120, dur: 0.7, vol: 0.6, brownian: true });
+        burst(a, bus, { type: 'bandpass', freq: 1800, to: 500, dur: 1.4, vol: 0.25, q: 0.8 });
+        tone(a, bus, { type: 'sine', freq: 140, to: 50, dur: 0.5, vol: 0.25 });
+        for (let i = 0; i < 14; i++) burst(a, bus, { at: 0.4 + Math.random() * 1.2, type: 'highpass', freq: 2500 + Math.random() * 2500, dur: 0.05, vol: 0.06 });
         break;
       case 'tick':
         tone(a, bus, { type: 'sine', freq: 1500, dur: 0.04, vol: 0.05 });

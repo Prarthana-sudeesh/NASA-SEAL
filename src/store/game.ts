@@ -7,7 +7,7 @@ import type { SlotId } from '../data/components.ts';
 import type { Outcome } from '../engine/cutscenes.ts';
 import type { HazardResult } from '../hazards/hazards.ts';
 
-export const LAUNCHES_PER_RUN = 10;
+export const LAUNCHES_PER_RUN = 3;
 
 export type Screen =
   | 'title'
@@ -155,6 +155,11 @@ export const useGame = create<GameState>()(
         // Resume on a safe screen: never mid-cutscene.
         const safe: Screen = screen === 'launch' || screen === 'cutscene-test' ? 'report' : screen;
         return { ...rest, screen: safe };
+      },
+      // Runs used to be 10 launches: trim older saves to the current run length.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<GameState>;
+        return { ...current, ...p, attempts: (p.attempts ?? []).slice(0, LAUNCHES_PER_RUN) };
       },
     },
   ),

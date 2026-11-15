@@ -56,7 +56,7 @@ export default function RunSummary() {
   return (
     <div>
       <ScreenTitle kicker={`${DIFFICULTIES[d].label} run complete`} title="Run summary">
-        Ten launches flown. Here’s how the whole run went.
+        All {LAUNCHES_PER_RUN} launches flown. Here’s how the whole run went.
       </ScreenTitle>
       <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
         <Card tiltKey="final" className="p-6 text-center">
@@ -65,7 +65,7 @@ export default function RunSummary() {
             <CountUp value={avg} decimals={1} onTick={() => play('score_tick')} />
           </p>
           <p className="text-muted">out of a possible 1,400</p>
-          <ol className="mt-5 grid grid-cols-5 gap-2">
+          <ol className="mt-5 grid grid-cols-3 gap-2">
             {attempts.map((a) => (
               <li key={a.n} className={`rounded-xl border-2 border-ink p-1 text-sm ${a.success ? 'bg-go text-ink' : 'bg-danger text-ink'}`} title={getPlanet(a.planetId)?.nickname}>
                 <b>#{a.n}</b>
